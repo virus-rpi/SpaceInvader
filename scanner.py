@@ -101,4 +101,5 @@ class scanner:
 
 if __name__ == "__main__":
     s = scanner()
-    s.update(r"ip.db")
+    while True:
+        s.update(r"ip.db")

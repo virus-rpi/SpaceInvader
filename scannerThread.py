@@ -7,7 +7,7 @@ class scanner:
     def __int__(self):
         pass
 
-    def worker(self, db, i):
+    async def worker(self, db, i):
         ip = db.execute(f'SELECT ip FROM ip WHERE nr = {str(i)}')[0][0]
         port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
         print(i)
@@ -59,4 +59,5 @@ class scanner:
 
 if __name__ == "__main__":
     s = scanner()
-    s.update(r"ip.db")
+    while True:
+        s.update(r"ip.db")

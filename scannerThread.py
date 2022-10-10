@@ -1,13 +1,15 @@
 import dbManeger
 from mcstatus import JavaServer
 from multiprocessing.pool import ThreadPool as Pool
+import time
 
 
 class scanner:
     def __int__(self):
-        pass
+        self.done = 0
 
-    async def worker(self, db, i):
+    def worker(self, db, i, nr):
+        x = nr
         ip = db.execute(f'SELECT ip FROM ip WHERE nr = {str(i)}')[0][0]
         port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
         print(i)
@@ -36,23 +38,28 @@ class scanner:
             db.execute(f'UPDATE ip SET type = "{type}" WHERE nr = {str(i)}')
         except TimeoutError:
             print("Not responding")
+            x -= 1
         except ConnectionResetError:
             print("Connection closed")
+            x -= 1
         except Exception:
             print("Error")
+            x -= 1
+        finally:
+            self.done += 1
+            print("Done!")
 
         print("\n")
         print("-----------------------")
         print("\n")
-    
+
     def update(self, file):
+        self.done = 0
         db = dbManeger.dbManeger(file)
         nr = db.execute('SELECT MAX(nr) FROM ip')[0][0]
-        pool_size = nr
-        pool = Pool(pool_size)
+        pool = Pool(3)
         for i in range(1, nr):
-            pool.apply_async(self.worker, (db, i,))
-
+            pool.apply_async(self.worker, (db, i, nr,))
         pool.close()
         pool.join()
 
@@ -60,4 +67,8 @@ class scanner:
 if __name__ == "__main__":
     s = scanner()
     while True:
+        print(
+            "   _____ _______       _____ _______ \n  / ____|__   __|/\   |  __ \__   __|\n | (___    | |  /  \  | |__) | | |   \n  \___ \   | | / /\ \ |  _  /  | |   \n  ____) |  | |/ ____ \| | \ \  | |   \n |_____/   |_/_/    \_\_|  \_\ |_|  \n ")
         s.update(r"ip.db")
+        print(
+            " _____   ____  _   _ ______ \n|  __ \ / __ \| \ | |  ____|\n| |  | | |  | |  \| | |__   \n| |  | | |  | | . ` |  __|  \n| |__| | |__| | |\  | |____ \n|_____/ \____/|_| \_|______|\n")

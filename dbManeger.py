@@ -48,5 +48,6 @@ class dbManeger:
 if __name__ == "__main__":
     db = dbManeger(r"ip.db")
     # db.add("93.90.178.196", 25565, 20, 0, "1.19.2", "A Minecraft Server", "{}")
-    print(db.execute("SELECT * FROM ip;"))
+    db.add("171.5.187.206", 25565, 20, 1, "1,19,2", "", "")
+    # print(db.execute("SELECT * FROM ip;"))
     # print(db.find("ip", '"93.90.178.196"'))

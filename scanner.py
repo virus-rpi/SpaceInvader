@@ -57,9 +57,9 @@ class scanner:
             print("\n")
     
     def update(self, file):
-        x = 0
         db = dbManeger.dbManeger(file)
         nr = db.execute('SELECT MAX(nr) FROM ip')[0][0]
+        x = nr
         for i in range(1, nr):
             ip = db.execute(f'SELECT ip FROM ip WHERE nr = {str(i)}')[0][0]
             port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
@@ -88,13 +88,15 @@ class scanner:
                 type = query.raw.get("gametype")
                 print(type)
                 db.execute(f'UPDATE ip SET type = "{type}" WHERE nr = {str(i)}')
-                x += 1
             except TimeoutError:
                 print("Not responding")
+                x -= 1
             except ConnectionResetError:
                 print("Connection closed")
+                x -= 1
             except Exception:
                 print("Error")
+                x -= 1
 
             print("\n")
             print("-----------------------")

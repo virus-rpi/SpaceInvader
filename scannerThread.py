@@ -42,8 +42,9 @@ class scanner:
         except ConnectionResetError:
             print("Connection closed")
             x -= 1
-        except Exception:
+        except Exception as e:
             print("Error")
+            print(str(e))
             x -= 1
         finally:
             self.done += 1

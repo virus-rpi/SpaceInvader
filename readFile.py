@@ -33,14 +33,42 @@ class readFile:
                 list.append(split)
             return list
 
+    def getCustom(self, file):
+        with open(file, encoding='utf-8') as f:
+            lines = f.readlines()
+            list = []
+            counter = 0
+            for i in lines:
+                if i.strip('\n') == "Json not readable":
+                    counter = 4
+                if counter == 0:
+                    ip, port = i.strip('\n').split(":")
+                if counter == 1:
+                    version = i.strip('\n').replace('Version: ', '')
+                if counter == 2:
+                    onlinePlayers, maxPlayers = i.strip('\n').replace("Online: ", "").split("/")
+                if counter == 3:
+                    motd = i.strip('\n').replace("MOTD: ", "")
+                if counter == 4:
+                    pass
+                if counter == 5:
+                    counter = -1
+                    list.append([ip, port, [maxPlayers, onlinePlayers], version, motd])
+                counter += 1
+        return list
+
+
+
     def remove_non_ascii(self, string):
         return ''.join(char for char in string if ord(char) < 128)
 
-    def add(self, file, dbfile, CLI=False):
-        if CLI == False:
+    def add(self, file, dbfile, type="GUI"):
+        if type == "GUI":
             ips = self.get(file)
-        else:
+        elif type == "CLI":
             ips = self.getCLI(file)
+        else:
+            ips = self.getCustom(file)
 
         for i in range(len(ips)):
             server = ips[i]
@@ -52,10 +80,9 @@ class readFile:
             motd = self.remove_non_ascii(server[4]).replace("@", "").replace('"', "").replace("'", "")
 
             db = dbManeger.dbManeger(dbfile)
-            db.add(ip, port,onlinePlayers, maxPlayers, version, motd)
+            db.add(ip, port, onlinePlayers, maxPlayers, version, motd)
 
 
 if __name__ == "__main__":
     r = readFile()
-    r.add("ips.txt", "ip.db")
-    r.add("ips2.txt", "ip.db", True)
+    # r.add("outputs/1.txt", "ip.db", "Custom")

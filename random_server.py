@@ -88,7 +88,7 @@ def main(argv):
     # Parse options
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--listen-host", default="hypixel.net", help="address to listen on")
+    parser.add_argument("-a", "--listen-host", default="93.30.211.177", help="address to listen on")
     parser.add_argument("-p", "--listen-port", default=25565, type=int, help="port to listen on")
     parser.add_argument("-b", "--connect-host", default="127.0.0.1", help="address to connect to")
     parser.add_argument("-q", "--connect-port", default=25565, type=int, help="port to connect to")

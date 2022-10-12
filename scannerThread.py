@@ -36,6 +36,12 @@ class scanner:
             type = query.raw.get("gametype")
             print(type)
             db.execute(f'UPDATE ip SET type = "{type}" WHERE nr = {str(i)}')
+            ping = round(server.ping())
+            print(ping)
+            db.execute(f'UPDATE ip SET ping = "{ping}" WHERE nr = {str(i)}')
+            time_now = time.strftime("%d %b %H:%M:%S")
+            print(time_now)
+            db.execute(f'UPDATE ip SET last_online = "{time_now}" WHERE nr = {str(i)}')
         except TimeoutError:
             print("Not responding")
             x -= 1

@@ -12,7 +12,8 @@ class readFile:
                 split = i.split(" - ")
                 del split[0]
                 del split[-1]
-                split[2] = split[2].split('/')
+                on, max = split[2].split('/')
+                split[2] = [max, on]
                 list.append(split)
             return list
 
@@ -29,7 +30,8 @@ class readFile:
                 split.pop(0)
                 split.insert(0, ipport[0])
                 split.insert(1, ipport[1])
-                split[2] = split[2].split('/')
+                on, max = split[2].split('/')
+                split[2] = [max, on]
                 list.append(split)
             return list
 
@@ -48,7 +50,7 @@ class readFile:
                 if counter == 2:
                     onlinePlayers, maxPlayers = i.strip('\n').replace("Online: ", "").split("/")
                 if counter == 3:
-                    motd = i.strip('\n').replace("MOTD: ", "")
+                    motd = i.strip('\n').replace("MOTD: ", "").replace("]", "").replace("[", "")
                 if counter == 4:
                     pass
                 if counter == 5:
@@ -69,6 +71,7 @@ class readFile:
             ips = self.getCLI(file)
         else:
             ips = self.getCustom(file)
+        print(ips)
 
         for i in range(len(ips)):
             server = ips[i]
@@ -80,9 +83,9 @@ class readFile:
             motd = self.remove_non_ascii(server[4]).replace("@", "").replace('"', "").replace("'", "")
 
             db = dbManeger.dbManeger(dbfile)
-            db.add(ip, port, onlinePlayers, maxPlayers, version, motd)
+            # db.add(ip, port, maxPlayers, onlinePlayers, version, motd)
 
 
 if __name__ == "__main__":
     r = readFile()
-    # r.add("outputs/1.txt", "ip.db", "Custom")
+    r.add("outputs/5.txt", "ip.db", "Custom")

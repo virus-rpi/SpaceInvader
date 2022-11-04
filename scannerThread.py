@@ -2,6 +2,7 @@ import dbManeger
 from mcstatus import JavaServer
 from multiprocessing.pool import ThreadPool as Pool
 import time
+import requests
 
 
 class scanner:
@@ -14,6 +15,15 @@ class scanner:
         port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
         print(i)
         print(ip)
+
+        try:
+            response = requests.get(f"https://geolocation-db.com/json/{ip}&position=true").json()
+            country = response['country_name']
+            db.execute(f'UPDATE ip SET country = "{country}" WHERE nr = {str(i)}')
+            print(country)
+        except:
+            print("Location not found")
+
         try:
             server = JavaServer.lookup(f'{ip}:{port}')
             query = server.query()

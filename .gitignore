@@ -3,3 +3,5 @@ ips.txt
 ips2.txt
 ip.sqbpro
 *.log
+*.txt
+*.db

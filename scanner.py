@@ -1,6 +1,7 @@
 import dbManeger
 from mcstatus import JavaServer
 import time
+import requests
 
 
 class scanner:
@@ -35,7 +36,7 @@ class scanner:
     def plugins(self, file):
         db = dbManeger.dbManeger(file)
         nr = db.execute('SELECT MAX(nr) FROM ip')[0][0]
-        for i in range(1, nr):
+        for i in range(1000, nr):
             ip = db.execute(f'SELECT ip FROM ip WHERE nr = {str(i)}')[0][0]
             port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
             print(i)
@@ -56,7 +57,7 @@ class scanner:
             print("\n")
             print("-----------------------")
             print("\n")
-    
+
     def update(self, file):
         db = dbManeger.dbManeger(file)
         nr = db.execute('SELECT MAX(nr) FROM ip')[0][0]
@@ -66,11 +67,18 @@ class scanner:
             port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
             print(i)
             print(ip)
+
+            try:
+                response = requests.get(f"https://geolocation-db.com/json/{ip}&position=true").json()
+                country = response['country_name']
+                db.execute(f'UPDATE ip SET country = "{country}" WHERE nr = {str(i)}')
+                print(country)
+            except:
+                print("Location not found")
+
             try:
                 server = JavaServer.lookup(f'{ip}:{port}')
                 query = server.query()
-
-
                 plugins = query.raw.get("plugins")
                 print(plugins)
                 db.execute(f'UPDATE ip SET plugins = "{plugins}" WHERE nr = {str(i)}')
@@ -113,4 +121,5 @@ class scanner:
 
 if __name__ == "__main__":
     s = scanner()
-    s.update(r"ip.db")
+    while True:
+        s.update(r"ip.db")

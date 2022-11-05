@@ -4,7 +4,7 @@ import dash
 import dbManeger
 import plotly.graph_objects as go
 
-app = Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css'])
+app = Dash(__name__, external_stylesheets=['https://raw.githubusercontent.com/virus-rpi/SpaceInvador/main/assets/style.css'])
 
 app.layout = html.Div([
     html.Div([

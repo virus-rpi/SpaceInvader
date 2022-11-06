@@ -1,6 +1,7 @@
 from plotly.subplots import make_subplots
 from dash import Dash, dcc, html, Input, Output
 import dash
+import dash_daq as daq
 import dbManeger
 import plotly.graph_objects as go
 
@@ -44,12 +45,22 @@ app.layout = html.Div([
             style={
                 'text-align': 'center',
             }
-        )
+        ),
+        html.P(" \n\n\n"),
+        daq.ToggleSwitch(
+            id="dc_bot",
+            value=False,
+            label="Discord bot:",
+            labelPosition='top',
+            style={
+                'text-align': 'left',
+            }
+        ),
+        html.Div(id="dc_bot_div")
 
     ],
         style={
             'background-color': '#111111',
-            'margin': 'auto',
         })
 ])
 
@@ -58,6 +69,13 @@ def percent(part, whole):
     return 100 * float(part) / float(whole)
 
 
+
+@app.callback(
+    Output('dc_bot_div', 'children'),
+    Input('dc_bot', 'value'),
+)
+def toggle_bot(value):
+    return value
 @app.callback(
     Output("graph", "figure"),
     [dash.dependencies.Input('update', 'n_clicks')],
@@ -164,4 +182,4 @@ def update_charts(_):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=80, host='0.0.0.0')

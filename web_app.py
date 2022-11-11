@@ -4,15 +4,19 @@ import dash
 import dash_daq as daq
 import dbManeger
 import plotly.graph_objects as go
+from threading import Thread
+import os
+# from bot import bot
 
-app = Dash(__name__, external_stylesheets=['https://raw.githubusercontent.com/virus-rpi/SpaceInvador/main/assets/style.css'])
+app = Dash(__name__,
+           external_stylesheets=['https://raw.githubusercontent.com/virus-rpi/SpaceInvador/main/assets/style.css'])
 
 app.layout = html.Div([
     html.Div([
         html.H1(
             children='Dashboard of SpaceInvador',
             style={
-                'text-align': 'center',
+                'textAlign': 'center',
             }
         ),
         html.P(
@@ -25,7 +29,7 @@ app.layout = html.Div([
             "Update",
             id="update",
             style={
-                'text-align': 'center'
+                'textAlign': 'center'
             }
         ),
         html.P(" \n\n\n"),
@@ -34,7 +38,7 @@ app.layout = html.Div([
         html.P(" \n\n\n"),
     ],
         style={
-            'background-color': '#111111',
+            'backgroundColor': '#111111',
             'textAlign': 'center',
             'margin': 'auto'
         }
@@ -43,7 +47,7 @@ app.layout = html.Div([
         html.H4(
             children="Control",
             style={
-                'text-align': 'center',
+                'textAlign': 'center',
             }
         ),
         html.P(" \n\n\n"),
@@ -53,14 +57,13 @@ app.layout = html.Div([
             label="Discord bot:",
             labelPosition='top',
             style={
-                'text-align': 'left',
+                'textAlign': 'left',
             }
         ),
-        html.Div(id="dc_bot_div")
-
+        html.Div(id="dc_bot_div"),
     ],
         style={
-            'background-color': '#111111',
+            'backgroundColor': '#111111',
         })
 ])
 
@@ -69,13 +72,29 @@ def percent(part, whole):
     return 100 * float(part) / float(whole)
 
 
+# t = bot.bot_class('T')
+
 
 @app.callback(
     Output('dc_bot_div', 'children'),
     Input('dc_bot', 'value'),
 )
 def toggle_bot(value):
+    print(value)
+    if value:
+        print('Try to start bot')
+        # t.start()
+        print('Started bot')
+    if not value:
+        try:
+            # t.stop()
+            # t.join()
+            print('Stopped bot')
+        except Exception as e:
+            print(e)
     return value
+
+
 @app.callback(
     Output("graph", "figure"),
     [dash.dependencies.Input('update', 'n_clicks')],

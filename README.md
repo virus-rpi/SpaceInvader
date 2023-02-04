@@ -14,6 +14,7 @@ The bot can scann for Minecraft Server and can run recon on the scanned servers.
 - More Statistics
 - Installer
 - Add Mc bots to join server and interact with server (e.g. build schematic or chat on server)
+- Proxy to connect to Servers safely and give them more abilitys through custom commands
 
 ```
  __          _______ _____    _ 

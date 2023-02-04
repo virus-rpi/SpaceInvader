@@ -6,10 +6,38 @@ import dbManeger
 import plotly.graph_objects as go
 from threading import Thread
 import os
+import plotly.express as px
+import pandas as pd
+from sqlalchemy import create_engine
+import country_converter as coco
+import numpy as np
+
 # from bot import bot
 
 app = Dash(__name__,
            external_stylesheets=['https://raw.githubusercontent.com/virus-rpi/SpaceInvador/main/assets/style.css'])
+
+
+def globe():
+    disk_engine = create_engine('sqlite:///ip.db')
+    df = pd.read_sql_query('SELECT country, COUNT(*) FROM ip GROUP BY country', disk_engine)
+
+    df = df.replace(to_replace='None', value=np.nan).dropna()
+    df = df.replace(to_replace='Not found', value=np.nan).dropna()
+
+    for i in list(df['country']):
+        # print(i, coco.convert(names=[i], to="ISO2"))
+        df.loc[df['country'].isin([i]), 'country'] = coco.convert(names=[i], to="ISO3")
+
+    fig = px.scatter_geo(df, locations="country",
+                         hover_name="country",
+                         size="COUNT(*)",
+                         # projection="natural earth",
+                         color="country"
+                         )
+    fig.update_layout(template="plotly_dark")
+    return fig
+
 
 app.layout = html.Div([
     html.Div([
@@ -17,6 +45,7 @@ app.layout = html.Div([
             children='Dashboard of SpaceInvador',
             style={
                 'textAlign': 'center',
+		'color': 'white'
             }
         ),
         html.P(
@@ -29,12 +58,26 @@ app.layout = html.Div([
             "Update",
             id="update",
             style={
-                'textAlign': 'center'
+                'textAlign': 'center',
+		'color': 'white'
             }
         ),
         html.P(" \n\n\n"),
-        html.H4("Statistics"),
+        html.H4(
+	    children="Statistics",
+	    style={
+		'color': 'white',
+            }
+	),
         dcc.Graph(id="graph", style={'height': 1150}),
+        html.P(" \n\n\n"),
+        html.H4(
+	    children="Map",
+	    style={
+		'color': 'white',
+            }
+	),
+        dcc.Graph(figure=globe()),
         html.P(" \n\n\n"),
     ],
         style={
@@ -48,6 +91,7 @@ app.layout = html.Div([
             children="Control",
             style={
                 'textAlign': 'center',
+		'color': 'white',
             }
         ),
         html.P(" \n\n\n"),
@@ -58,6 +102,7 @@ app.layout = html.Div([
             labelPosition='top',
             style={
                 'textAlign': 'left',
+		'color': 'white',
             }
         ),
         html.Div(id="dc_bot_div"),
@@ -173,7 +218,8 @@ def update_charts(_):
         ),
         specs=[
             [{"type": "pie"}, {"type": "pie"}],
-            [{"type": "bar"}, {"type": "pie"}]],
+            [{"type": "bar"}, {"type": "pie"}],
+        ],
     )
 
     fig.add_trace(

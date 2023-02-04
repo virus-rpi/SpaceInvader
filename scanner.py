@@ -2,7 +2,61 @@ import dbManeger
 from mcstatus import JavaServer
 import time
 import requests
+import json
+import socket
+from progress.bar import Bar
+def read(sock, n):
+    o = b""
+    while len(o) < n:
+        o += sock.recv(n - len(o))
+    return o
 
+
+# Read a varint from the socket
+def read_varint(sock, remaining=0):
+    o = 0
+    for i in range(5):
+        b = ord(sock.recv(1))
+        o |= (b & 0x7F) << 7 * i
+        if not b & 0x80:
+            return remaining - (i + 1), o
+
+
+# Read a packet header from the socket
+def read_header(sock, compression=False):
+    # Packet length
+    _, length = read_varint(sock)
+
+    # Compression (1.8+, only if enabled)
+    if compression:
+        length, _ = read_varint(sock, length)
+
+    # Packet ident
+    length, packet_ident = read_varint(sock, length)
+
+    return length, packet_ident
+
+
+### Main code
+
+def get_status(addr, port=25565):
+    ### 1st pass - get the protocol version
+    sock = socket.create_connection((addr, port), 10)  # Connect to the server
+    sock.send(b"\x06\x00\x00\x00\x00\x00\x01")  # Send handshake packet
+    sock.send(b"\x01\x00")  # Send req packet
+
+    length, _ = read_header(sock)  # Read res packet header
+    length, _ = read_varint(sock, length)  # Read res json length
+    status = json.loads(read(sock, length))  # Read res json
+    ver = int(status["version"]["protocol"])  # Set protocol ver for 2nd pass
+
+    ### 2nd pass - check online mode
+    sock = socket.create_connection((addr, port), 10)  # Connect to server
+    sock.send(b"\x06\x00%s\x00\x00\x00\x02" % chr(ver).encode())  # Send handshake
+    sock.send(b"\x03\x00\x01\x5f")  # Send login start
+    # print(length, status, ver)
+
+    return status
 
 class scanner:
     def __int__(self):
@@ -58,15 +112,21 @@ class scanner:
             print("-----------------------")
             print("\n")
 
+
     def update(self, file):
         db = dbManeger.dbManeger(file)
         nr = db.execute('SELECT MAX(nr) FROM ip')[0][0]
         x = nr
+        bar = Bar('Processing', max=nr)
         for i in range(1, nr):
             ip = db.execute(f'SELECT ip FROM ip WHERE nr = {str(i)}')[0][0]
             port = db.execute(f'SELECT port FROM ip WHERE nr = {str(i)}')[0][0]
             print(i)
             print(ip)
+            try:
+                print(get_status(ip, port))
+            except:
+                print("Server Offline")
 
             try:
                 response = requests.get(f"https://geolocation-db.com/json/{ip}&position=true").json()
@@ -116,6 +176,8 @@ class scanner:
             print("\n")
             print("-----------------------")
             print("\n")
+            bar.next()
+        bar.finish()
         print(x)
 
 

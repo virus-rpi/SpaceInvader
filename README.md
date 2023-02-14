@@ -25,7 +25,7 @@ The bot can scann for Minecraft Server and can run recon on the scanned servers.
      \/  \/   |_____|_|      (_)
 ```             
 This Project ist still work in progress and not very useable at the moment.
-Also please DON'T use it for greafing.
+Also please DON'T use it for griefing.
 
 ## License
 Copyright (c) 2022, virus-rpi

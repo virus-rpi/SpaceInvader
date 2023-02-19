@@ -1,7 +1,7 @@
 # SpaceInvador
 ## A Copenheimer like bot.
 
-The bot can scann for Minecraft Server and can run recon on the scanned servers.
+The bot can scan for Minecraft Server and can run recon on the scanned servers.
 ## Features
 - Scanning for Minecraft Servers
 - Collect data about scanned servers

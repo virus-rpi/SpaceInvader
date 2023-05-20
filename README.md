@@ -27,6 +27,13 @@ The bot can scan for Minecraft Server and can run recon on the scanned servers.
 This Project ist still work in progress and not very useable at the moment.
 Also please DON'T use it for griefing.
 
+## Usage
+1. To scan for new servers run the scan.py script, it will output a txt file with mc servers
+2. Use the readFile.py script to reformat the txt file to a splite db
+3. To get more information on the servers run the scaner.py script
+4. To see statistics run the web_app.py script
+
+
 ## License
 Copyright (c) 2022, virus-rpi
 All rights reserved.

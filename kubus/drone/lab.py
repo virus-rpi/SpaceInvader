@@ -6,16 +6,16 @@ import random
 class BOT:
     def __init__(self):
         self.bot = None
-        self.got = require('got', '11.8.3')
+        # self.got = require('got', '11.8.3')
         self.mineflayer = require('mineflayer')
         # self.thealtening = require('thealtening-free')
 
     def start(self):
         self.bot = self.mineflayer.createBot({
-            'host': '1.55.8.194',
-            # 'auth': 'microsoft',
-            'username': 'drone' + str(random.randint(1, 1000000000))
-        })
+            'host': 'baum-server.de',
+            'auth': 'microsoft',
+            # 'username': 'drone' + str(random.randint(1, 1000000000)
+            })
 
         print("Started mineflayer")
 
@@ -35,4 +35,5 @@ while True:
 
 
     print("____________________________")
+    break
     time.sleep(5)

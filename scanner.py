@@ -5,6 +5,8 @@ import requests
 import json
 import socket
 from progress.bar import Bar
+
+
 def read(sock, n):
     o = b""
     while len(o) < n:
@@ -57,6 +59,7 @@ def get_status(addr, port=25565):
     # print(length, status, ver)
 
     return status
+
 
 class scanner:
     def __int__(self):
@@ -111,7 +114,6 @@ class scanner:
             print("\n")
             print("-----------------------")
             print("\n")
-
 
     def update(self, file):
         db = dbManeger.dbManeger(file)

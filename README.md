@@ -35,7 +35,10 @@ Also please DON'T use it for griefing.
 
 
 ## License
-Copyright (c) 2022, virus-rpi
+Copyright (c) 2022, virus-rpi,
 All rights reserved.
 
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+## Credits
+Satsuma for helping me with scanning for ips

@@ -19,7 +19,7 @@ app = Dash(__name__,
 
 
 def globe():
-    disk_engine = create_engine('sqlite:///ip.db')
+    disk_engine = create_engine('sqlite:///ip2.db')
     df = pd.read_sql_query('SELECT country, COUNT(*) FROM ip GROUP BY country', disk_engine)
 
     df = df.replace(to_replace='None', value=np.nan).dropna()
@@ -145,7 +145,7 @@ def toggle_bot(value):
     [dash.dependencies.Input('update', 'n_clicks')],
 )
 def update_charts(_):
-    db = dbManeger.dbManeger(r"ip.db")
+    db = dbManeger.dbManeger(r"ip2.db")
 
     countrys = db.execute('SELECT country FROM ip')
 
@@ -208,19 +208,34 @@ def update_charts(_):
     labels3 = ['Motd: "A Minecraft Server"', 'Motd: Not "A Minecraft Server"']
     values3 = [a, b]
 
-    fig = make_subplots(
-        rows=2, cols=2,
-        subplot_titles=(
-            "Country\n",
-            "Version\n",
-            f'Ping (Avg: {int(sum(ping) / len(ping))})\n',
-            "Motd\n"
-        ),
-        specs=[
-            [{"type": "pie"}, {"type": "pie"}],
-            [{"type": "bar"}, {"type": "pie"}],
-        ],
-    )
+    try:
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=(
+                "Country\n",
+                "Version\n",
+                f'Ping (Avg: {int(sum(ping) / len(ping))})\n',
+                "Motd\n"
+            ),
+            specs=[
+                [{"type": "pie"}, {"type": "pie"}],
+                [{"type": "bar"}, {"type": "pie"}],
+            ],
+        )
+    except ZeroDivisionError:
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=(
+                "Country\n",
+                "Version\n",
+                'Ping not found\n',
+                "Motd\n"
+            ),
+            specs=[
+                [{"type": "pie"}, {"type": "pie"}],
+                [{"type": "bar"}, {"type": "pie"}],
+            ],
+        )
 
     fig.add_trace(
         go.Pie(labels=labels1, values=values1),

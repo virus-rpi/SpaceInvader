@@ -6,6 +6,9 @@ import time
 import simplejson
 
 
+def remove_non_ascii(string):
+    return ''.join(char for char in string if ord(char) < 128)
+
 def read(sock, n):
     A = b''
     while len(A) < n: A += sock.recv(n - len(A))
@@ -58,6 +61,9 @@ class Scanner:
         except ConnectionRefusedError:
             print("Connection refused")
             return 'Connection refused'
+        except TypeError:
+            print("Type error")
+            return 'Type error'
 
     def update_country(self, ip_id, ip):
         try:
@@ -86,6 +92,8 @@ class Scanner:
             return f'Version: {version}'
         except KeyError:
             print(data)
+        except TypeError:
+            print(data)
 
     def update_motd(self, ip_id, ip, data):
         try:
@@ -98,6 +106,7 @@ class Scanner:
             except:
                 motd = data['description']
 
+        motd = remove_non_ascii(motd).replace("@", "").replace('"', "").replace("'", "")
         self.db.execute(f'UPDATE ip SET motd = "{motd}" WHERE nr = {str(ip_id)}')
         return f'Motd: {motd}'
 
@@ -124,7 +133,9 @@ class Scanner:
 
             data = self.get_data(ip, port)
 
-            if data != 'Offline' and data != 'Connection reset' and data != 'Connection refused':
+            if data != 'Offline' and data != 'Connection reset' and data != 'Connection refused' and data != 'Type error':
+                print(self.update_type(ip_id, ip, data))
+                print(self.update_ping(ip_id, ip, data))
                 print(self.update_version(ip_id, ip, data))
                 print(self.update_motd(ip_id, ip, data))
                 print(self.update_players(ip_id, ip, data))
@@ -136,8 +147,8 @@ class Scanner:
 
 
 if __name__ == "__main__":
-    json_object = json.dumps(get_status("178.32.249.234", 25565), indent=4)
-    with open("test.json", "w") as f:
-        f.write(json_object)
-    s = Scanner(r"ip.db")
+    # json_object = json.dumps(get_status("178.32.249.234", 25565), indent=4)
+    # with open("test.json", "w") as f:
+    #    f.write(json_object)
+    s = Scanner(r"ip2.db")
     s.update()

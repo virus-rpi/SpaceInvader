@@ -1,4 +1,4 @@
-import dbManeger
+from dbManeger import dbManeger
 
 
 def get(file):
@@ -63,7 +63,7 @@ def remove_non_ascii(string):
     return ''.join(char for char in string if ord(char) < 128)
 
 
-def add(file, dbfile, type="GUI"):
+def add(file, db, type="GUI"):
     if type == "GUI":
         ips = get(file)
     elif type == "CLI":
@@ -79,10 +79,17 @@ def add(file, dbfile, type="GUI"):
         onlinePlayers = server[2][1]
         version = server[3]
         motd = remove_non_ascii(server[4]).replace("@", "").replace('"', "").replace("'", "")
-        db = dbManeger.dbManeger(dbfile)
         db.add(ip, port, maxPlayers, onlinePlayers, version, motd)
         print(ip, port, maxPlayers, onlinePlayers, version, motd)
 
 
 if __name__ == "__main__":
-    add("christian.txt", "ip2.db", "CLI")
+    credentials = {
+        'host': 'localhost',
+        'port': '5432',
+        'database': 'ip',
+        'user': 'dbuser',
+        'password': '123456'
+    }
+    db = dbManeger("postgresql", credentials)
+    # add("christian.txt", db, "CLI")

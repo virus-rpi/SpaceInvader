@@ -275,7 +275,7 @@ def main(argv):
     parser.add_argument("-p1", "--listen-port1", default=25565,
                         type=int, help="port to listen on")
     parser.add_argument("-b", "--connect-host",
-                        default="79.242.76.72", help="address to connect to")
+                        default="mc.hypixel.net", help="address to connect to")
     parser.add_argument("-q", "--connect-port", default=25565,
                         type=int, help="port to connect to")
     args = parser.parse_args(argv)

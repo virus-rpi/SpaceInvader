@@ -145,7 +145,7 @@ def toggle_bot(value):
     [dash.dependencies.Input('update', 'n_clicks')],
 )
 def update_charts(_):
-    db = dbManeger.dbManeger(r"ip2.db")
+    db = dbManeger.dbManeger("sqlite", r"ip2.db")
 
     countrys = db.execute('SELECT country FROM ip')
 

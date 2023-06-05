@@ -1,104 +1,147 @@
 from twisted.internet import reactor
-from twisted.internet.protocol import Protocol, Factory
-
-# Configuration variables
-MINECRAFT_SERVER_IP = "localhost"
-MINECRAFT_SERVER_PORT = 25565
-PROXY_LISTENER_IP = "localhost"
-PROXY_LISTENER_PORT = 25566
+from quarry.net.proxy import DownstreamFactory, Bridge
 
 
-class MinecraftProxyProtocol(Protocol):
-    def __init__(self):
-        self.server_transport = None
+class ProxyBridge(Bridge):
+    quiet_mode = True
 
-    def connectionMade(self):
-        print("Client connected:", self.transport.getPeer())
+    def packet_upstream_chat_command(self, buff):
+        command = buff.unpack_string()
 
-        # Connect to the Minecraft server
-        server_factory = MinecraftServerFactory(self)
-        reactor.connectTCP(MINECRAFT_SERVER_IP, MINECRAFT_SERVER_PORT, server_factory)
+        if command == "quiet":
+            self.toggle_quiet_mode()
+            buff.discard()
 
-    def dataReceived(self, data):
-        print("Received from client:", data)
+        else:
+            buff.restore()
+            self.upstream.send_packet("chat_command", buff.read())
 
-        # Forward data to the Minecraft server
-        if self.server_transport is not None:
-            self.server_transport.write(data)
+    def packet_upstream_chat_message(self, buff):
+        buff.save()
+        chat_message = self.read_chat(buff, "upstream")
+        self.logger.info(" >> %s" % chat_message)
 
-    def serverPacketReceived(self, data):
-        print("Received from server:", data)
+        if chat_message.startswith("/quiet"):
+            self.toggle_quiet_mode()
 
-        # Forward data to the client
-        self.transport.write(data)
+        elif self.quiet_mode and not chat_message.startswith("/"):
+            # Don't let the player send chat messages in quiet mode
+            msg = "Can't send messages while in quiet mode"
+            self.send_system(msg)
 
-    def connectionLost(self, reason):
-        print("Client disconnected:", self.transport.getPeer())
-        if self.server_transport is not None:
-            self.server_transport.loseConnection()
+        else:
+            # Pass to upstream
+            buff.restore()
+            self.upstream.send_packet("chat_message", buff.read())
 
-    # Called when the connection to the Minecraft server is established
-    def serverConnectionMade(self, server_transport):
-        print("Connected to Minecraft server:", server_transport.getPeer())
-        self.server_transport = server_transport
+    def toggle_quiet_mode(self):
+        # Switch mode
+        self.quiet_mode = not self.quiet_mode
 
-    # Called when the connection to the Minecraft server is lost
-    def serverConnectionLost(self, reason):
-        if self.server_transport is not None:
-            print("Disconnected from Minecraft server:", self.server_transport.getPeer())
-            self.server_transport = None
-        self.transport.loseConnection()
+        action = self.quiet_mode and "enabled" or "disabled"
+        msg = "Quiet mode %s" % action
+
+        self.send_system(msg)
+
+    def packet_downstream_chat_message(self, buff):
+        chat_message = self.read_chat(buff, "downstream")
+        self.logger.info(" :: %s" % chat_message)
+
+        # All chat messages on 1.19+ are from players and should be ignored in quiet mode
+        if self.quiet_mode and self.downstream.protocol_version >= 759:
+            return
+
+        # Ignore message that look like chat when in quiet mode
+        if chat_message is not None and self.quiet_mode and chat_message.startswith("<"):
+            return
+
+        # Pass to downstream
+        buff.restore()
+        self.downstream.send_packet("chat_message", buff.read())
+
+    def read_chat(self, buff, direction):
+        buff.save()
+        if direction == "upstream":
+            p_text = buff.unpack_string()
+            buff.discard()
+
+            return p_text
+        elif direction == "downstream":
+            # 1.19.1+
+            if self.downstream.protocol_version >= 760:
+                p_signed_message = buff.unpack_signed_message()
+                buff.unpack_varint()  # Filter result
+                p_position = buff.unpack_varint()
+                p_sender_name = buff.unpack_chat()
+
+                buff.discard()
+
+                if p_position not in (1, 2):  # Ignore system and game info messages
+                    # Sender name is sent separately to the message text
+                    return ":: <%s> %s" % (
+                        p_sender_name, p_signed_message.unsigned_content or p_signed_message.body.message)
+
+                return
+
+            p_text = buff.unpack_chat().to_string()
+
+            # 1.19+
+            if self.downstream.protocol_version == 759:
+                p_unsigned_text = buff.unpack_optional(lambda: buff.unpack_chat().to_string())
+                p_position = buff.unpack_varint()
+                buff.unpack_uuid()  # Sender UUID
+                p_sender_name = buff.unpack_chat()
+                buff.discard()
+
+                if p_position not in (1, 2):  # Ignore system and game info messages
+                    # Sender name is sent separately to the message text
+                    return "<%s> %s" % (p_sender_name, p_unsigned_text or p_text)
+
+            elif self.downstream.protocol_version >= 47:  # 1.8.x+
+                p_position = buff.unpack('B')
+                buff.discard()
+
+                if p_position not in (1, 2) and p_text.strip():  # Ignore system and game info messages
+                    return p_text
+
+            else:
+                return p_text
+
+    def send_system(self, message):
+        if self.downstream.protocol_version >= 760:  # 1.19.1+
+            self.downstream.send_packet("system_message",
+                                        self.downstream.buff_type.pack_chat(message),
+                                        self.downstream.buff_type.pack('?', False))  # Overlay false to put in chat
+        elif self.downstream.protocol_version == 759:  # 1.19
+            self.downstream.send_packet("system_message",
+                                        self.downstream.buff_type.pack_chat(message),
+                                        self.downstream.buff_type.pack_varint(1))  # Type 1 for system chat message
+        else:
+            self.downstream.send_packet("chat_message",
+                                        self.downstream.buff_type.pack_chat(message),
+                                        self.downstream.buff_type.pack('B', 0),
+                                        self.downstream.buff_type.pack_uuid(UUID(int=0)))
 
 
-class MinecraftProxyFactory(Factory):
-    protocol = MinecraftProxyProtocol
+class ProxyDownstreamFactory(DownstreamFactory):
+    bridge_class = ProxyBridge
+    motd = "Random Server"
+    online_mode = False
 
 
-class MinecraftServerProtocol(Protocol):
-    def connectionMade(self):
-        print("Connected to Minecraft server:", self.transport.getPeer())
+def main():
+    # Create factory
+    factory = ProxyDownstreamFactory()
+    factory.connect_host = "localhost"
+    factory.connect_port = 25565
 
-        # Associate the server transport with the proxy protocol
-        self.factory.proxy_protocol.serverConnectionMade(self.transport)
+    # Listen
+    factory.listen("localhost", 25566)
+    print("Proxy server started. Listening on localhost:25566")
 
-    def dataReceived(self, data):
-        print("Received from server:", data)
-
-        # Forward data to the proxy protocol
-        if self.factory.proxy_protocol is not None:
-            self.factory.proxy_protocol.serverPacketReceived(data)
-
-    def connectionLost(self, reason):
-        print("Disconnected from Minecraft server:", self.transport.getPeer())
-        if self.factory.proxy_protocol is not None:
-            self.factory.proxy_protocol.serverConnectionLost(reason)
-
-
-class MinecraftServerFactory(Factory):
-    protocol = MinecraftServerProtocol
-
-    def __init__(self, proxy_protocol):
-        self.proxy_protocol = proxy_protocol
-
-    def startedConnecting(self, connector):
-        print("Connecting to Minecraft server...")
-
-    def clientConnectionFailed(self, connector, reason):
-        print("Connection to Minecraft server failed:", reason)
-        self.proxy_protocol.serverConnectionLost(reason)
-
-    def buildProtocol(self, addr):
-        protocol_instance = self.protocol()
-        protocol_instance.factory = self
-        return protocol_instance
-
-    def clientConnectionLost(self, connector, reason):
-        if self.proxy_protocol is not None:
-            self.proxy_protocol.serverConnectionLost(reason)
-
-
-if __name__ == '__main__':
-    proxy_factory = MinecraftProxyFactory()
-    reactor.listenTCP(PROXY_LISTENER_PORT, proxy_factory, interface=PROXY_LISTENER_IP)
-    print("Minecraft proxy server started on", PROXY_LISTENER_IP + ":" + str(PROXY_LISTENER_PORT))
+    # Start the event loop
     reactor.run()
+
+
+if __name__ == "__main__":
+    main()

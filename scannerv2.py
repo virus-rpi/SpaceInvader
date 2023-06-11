@@ -7,7 +7,7 @@ import ping3
 import mcrcon
 import asyncio
 import os
-from custom_modules import dbManeger
+from custom_modules import dbManeger, loadEnv
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -270,16 +270,9 @@ class Scanner:
 
 
 if __name__ == "__main__":
-    DB_TYPE = os.getenv("dbType")
-    if DB_TYPE == "postgres":
-        DB = os.getenv("credentials")
-    if DB_TYPE == "sqlite":
-        DB = os.getenv("dbFile")
-    else:
-        print("No DB_TYPE")
-        DB = None
+    env = loadEnv.load()
 
     dbM = dbManeger.dbManeger
-    db = dbM(DB_TYPE, DB)
+    db = dbM(env['DB_TYPE'], env['DB'])
     s = Scanner(db)
-    asyncio.run(s.update(advanced=False, shodon=True))
+    asyncio.run(s.update())

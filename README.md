@@ -8,6 +8,25 @@ The bot can scan for Minecraft Server and can run recon on the scanned servers.
 - Host a Discord bot to interact with data
 - Host website with Statistics and controlles
 
+## Data that gets collected
+- ip
+- port
+- Online Players (Name + uuid)
+- Max Players
+- Version
+- Description
+- Plugins
+- Type (e.g. SMP)
+- Whitelist (enabled or not)
+- Ping
+- Last time it was scanned
+- Country
+- Rcon Port usable
+- A timeliene of the Data
+- Open Ports
+- CVEs on Server
+- Hostname
+
 ## Todo
 
 - Add Minecraft bots to join all servers and collect even more data

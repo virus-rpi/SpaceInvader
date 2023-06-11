@@ -1,4 +1,4 @@
-from dbManeger import dbManeger
+from custom_modules.dbManeger import dbManeger
 
 
 def remove_non_ascii(string):

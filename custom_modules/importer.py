@@ -1,7 +1,7 @@
 import os
 
-from readFile import readFile
-from dbManeger import dbManeger
+from custom_modules.readFile import readFile
+from custom_modules.dbManeger import dbManeger
 import regex as re
 from dotenv import load_dotenv
 

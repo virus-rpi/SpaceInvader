@@ -8,4 +8,7 @@ ip.sqbpro
 .env
 *.json
 
+lab
+legacy
+
 !requirements.txt

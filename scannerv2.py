@@ -9,6 +9,7 @@ import asyncio
 import os
 from custom_modules import dbManeger, loadEnv
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
@@ -84,14 +85,6 @@ def get_status(addr, port=25565):
     return data
 
 
-def update_type(ip_id, ip, data):
-    return f'Type scan not implemented'
-
-
-def update_plugin(ip_id, ip, data):
-    return f'Plugin scan not implemented'
-
-
 class Scanner:
     def __init__(self, db):
         self.db = db
@@ -101,21 +94,22 @@ class Scanner:
         return self.db.execute("SELECT * FROM ip")
 
     @staticmethod
-    async def get_data(ip, port=25565):
+    async def get_data(ip_id, ip, port=25565):
+        print(f'\nGetting data of {ip_id} ({ip}:{port})', end='')
         r = ''
         try:
             r = get_status(ip, port)
         except TimeoutError:
-            print("   Offline", end='')
+            print("    Offline", end='')
             r = 'Offline'
         except ConnectionResetError:
-            print("   Connection reset", end='')
+            print("    Connection reset")
             r = 'Connection reset'
         except ConnectionRefusedError:
-            print("   Connection refused", end='')
+            print("    Connection refused")
             r = 'Connection refused'
         except TypeError:
-            print("   Type error", end='')
+            print("    Type error")
             r = 'Type error'
         return r
 
@@ -133,15 +127,18 @@ class Scanner:
         max_online_players = data['players']['max']
         self.db.execute(f'UPDATE ip SET maxPlayers = {max_online_players} WHERE nr = {str(ip_id)}')
         if advanced:
-            if 'sample' in data['players']:
-                players = data['players']['sample']
-                if self.db.getType() == 'sqlite':
-                    self.db.execute(f"UPDATE ip SET players = '{players}' WHERE nr = {str(ip_id)}")
-                elif self.db.getType() == 'postgresql':
-                    self.db.execute("UPDATE ip SET players = %s WHERE nr = %s", (str(players), str(ip_id)))
-                return f'({online_players}/{max_online_players}) Players: {[name["name"] for name in players]}'
-            else:
-                self.db.execute(f"UPDATE ip SET players = '{[]}' WHERE nr = {str(ip_id)}")
+            try:
+                if 'sample' in data['players']:
+                    players = data['players']['sample']
+                    if self.db.getType() == 'sqlite':
+                        self.db.execute(f"UPDATE ip SET players = '{players}' WHERE nr = {str(ip_id)}")
+                    elif self.db.getType() == 'postgresql':
+                        self.db.execute("UPDATE ip SET players = %s WHERE nr = %s", (str(players), str(ip_id)))
+                    return f'({online_players}/{max_online_players}) Players: {[name["name"] for name in players]}'
+                else:
+                    self.db.execute(f"UPDATE ip SET players = '{[]}' WHERE nr = {str(ip_id)}")
+                    return f'({online_players}/{max_online_players}) \nPlayer names could not be retrieved'
+            except sqlite3.OperationalError:
                 return f'({online_players}/{max_online_players}) \nPlayer names could not be retrieved'
         else:
             return f'({online_players}/{max_online_players})'
@@ -225,54 +222,78 @@ class Scanner:
             self.db.execute(f"UPDATE ip SET shodon = '{result.text}' WHERE nr = {str(ip_id)}")
             return f'Shodon: {result.text}'
 
-    async def update(self, advanced=False, join=False, version="1.19.4", shodon=False):
-        full_data = {}
-        for ip_data in self.data:
-            ip_id = ip_data[0]
-            ip = ip_data[1]
-            port = int(ip_data[2])
+    async def update_db(self, ip_id, ip, port, data, advanced, join, version, shodon):
+        self.update_timeline(ip_id, data)
 
-            print(f'Getting data of {ip_id} ({ip}:{port})', end='')
-            data = await self.get_data(ip, port)
-            full_data[ip_id] = [ip, port, data]
-            print('')
+        if data != 'Offline' and data != 'Connection reset' and data != 'Connection refused' and data != 'Type error':
+            print(f'Updating {ip_id} ({ip}:{port}) ')
+            print(self.update_version(ip_id, ip, data))
+            print(self.update_motd(ip_id, ip, data))
+            print(self.update_players(ip_id, ip, data, advanced))
+            print(self.update_ping(ip_id, data))
+            self.update_last_online(ip_id)
+            if advanced:
+                print(self.update_type(ip_id, ip, data))
+                print(self.update_country(ip_id, ip))
+                print(self.update_plugin(ip_id, ip, data))
+                print(self.update_rcon(ip_id, ip))
+            if join:
+                v = self.db.execute(f'SELECT version FROM ip WHERE nr = {str(ip_id)}')[0][0]
+                if version in v:
+                    print(f'Joining {ip_id} ({ip}:{port})')
+                    print(self.join_server(ip_id, ip, port))
+            if shodon:
+                print(self.update_shodon(ip_id, ip))
+        else:
+            print(f'{ip_id} ({ip}:{port}) is Offline')
 
-        for ip_id in full_data.keys():
-            ip = full_data[ip_id][0]
-            port = full_data[ip_id][1]
-            data = full_data[ip_id][2]
+        print('\n----------\n')
+        return ''
 
-            self.update_timeline(ip_id, data)
+    async def update(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False, async_batches=True):
+        ip_data = self.read()
+        batches = [ip_data[i:i + batch_size] for i in range(0, len(ip_data), batch_size)]
+        results = []
+        for batch in batches:
+            request_tasks = []
+            db_tasks = []
+            for ip_data in batch:
+                ip_id = ip_data[0]
+                ip = ip_data[1]
+                port = int(ip_data[2])
 
-            if data != 'Offline' and data != 'Connection reset' and data != 'Connection refused' and data != 'Type error':
-                print(f'Updating {ip_id} ({ip}:{port}) ')
-                print(self.update_version(ip_id, ip, data))
-                print(self.update_motd(ip_id, ip, data))
-                print(self.update_players(ip_id, ip, data, advanced))
-                print(self.update_ping(ip_id, data))
-                self.update_last_online(ip_id)
-                if advanced:
-                    print(self.update_type(ip_id, ip, data))
-                    print(self.update_country(ip_id, ip))
-                    print(self.update_plugin(ip_id, ip, data))
-                    print(self.update_rcon(ip_id, ip))
-                if join:
-                    v = self.db.execute(f'SELECT version FROM ip WHERE nr = {str(ip_id)}')[0][0]
-                    if version in v:
-                        print(f'Joining {ip_id} ({ip}:{port})')
-                        print(self.join_server(ip_id, ip, port))
-                if shodon:
-                    print(self.update_shodon(ip_id, ip))
-            else:
-                print(f'{ip_id} ({ip}:{port}) is Offline')
+                if async_batches:
+                    task = asyncio.ensure_future(self.get_data(ip_id, ip, port))
+                    request_tasks.append(task)
+                else:
+                    data = await self.get_data(ip_id, ip, port)
+                    results.append(data)
 
-            print('\n----------\n')
+            results = await asyncio.gather(*request_tasks)
+
+            for ip_data in batch:
+                ip_id = ip_data[0]
+                ip = ip_data[1]
+                port = int(ip_data[2])
+                data = results[batch.index(ip_data)]
+
+                task = asyncio.ensure_future(self.update_db(ip_id, ip, port, data, advanced, join, version, shodon))
+                db_tasks.append(task)
+
+            await asyncio.gather(*db_tasks)
+
+    def run(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False, max_workers=1000000, async_batches=True):
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+
+        loop = asyncio.get_event_loop()
+        loop.set_default_executor(executor)
+        loop.run_until_complete(self.update(batch_size=batch_size, advanced=advanced, join=join, version=version, shodon=shodon, async_batches=async_batches))
+        executor.shutdown(wait=True)
 
 
 if __name__ == "__main__":
     env = loadEnv.load()
 
-    dbM = dbManeger.dbManeger
-    db = dbM(env['DB_TYPE'], env['DB'])
-    s = Scanner(db)
-    asyncio.run(s.update())
+    s = Scanner(dbManeger.dbManeger(env['DB_TYPE'], env['DB']))
+
+    s.run(advanced=True)

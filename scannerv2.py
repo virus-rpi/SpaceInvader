@@ -193,12 +193,35 @@ class Scanner:
         timeline[time_now] = json.dumps(data)
         if self.db.getType() == 'sqlite':
             self.db.execute('UPDATE ip SET timeline = ? WHERE nr = ?', (str(timeline), str(ip_id)))
-            print("SQLite")
         elif self.db.getType() == 'postgresql':
             self.db.execute('UPDATE ip SET timeline = %s WHERE nr = %s', (str(timeline), str(ip_id)))
-            print("PostgreSQL")
 
-    async def update(self, advanced=False):
+    def join_server(self, ip_id, ip, port):
+        requests.get(f'http://localhost:25567/connect?ip={ip}&port={port}')
+        time.sleep(1)
+        while "net.minecraft.class_412" in requests.get(f'http://localhost:25567/getScreen').text:
+            time.sleep(.3)
+        time.sleep(3)
+        r = requests.get(f'http://localhost:25567/getDisconnectReason')
+        if r.text != 'Not on a DisconnectedScreen':
+            if 'white' in r.text or 'White' in r.text:
+                self.db.execute(f"UPDATE ip SET whitelist = 'true' WHERE nr = {str(ip_id)}")
+                requests.get(f'http://localhost:25567/disconnect')
+                return f'Whitelist active'
+        r = requests.get(f'http://localhost:25567/getScreen')
+        if r.status_code == 404:
+            self.db.execute(f"UPDATE ip SET whitelist = 'false' WHERE nr = {str(ip_id)}")
+            requests.get(f'http://localhost:25567/disconnect')
+            return f'No whitelist'
+        requests.get(f'http://localhost:25567/disconnect')
+
+    def update_shodon(self, ip_id, ip):
+        result = requests.get(f'https://internetdb.shodan.io/{ip}')
+        if result.status_code == 200:
+            self.db.execute(f"UPDATE ip SET shodon = '{result.text}' WHERE nr = {str(ip_id)}")
+            return f'Shodon: {result.text}'
+
+    async def update(self, advanced=False, join=False, version="1.19.4", shodon=False):
         full_data = {}
         for ip_data in self.data:
             ip_id = ip_data[0]
@@ -229,6 +252,13 @@ class Scanner:
                     print(self.update_country(ip_id, ip))
                     print(self.update_plugin(ip_id, ip, data))
                     print(self.update_rcon(ip_id, ip))
+                if join:
+                    v = self.db.execute(f'SELECT version FROM ip WHERE nr = {str(ip_id)}')[0][0]
+                    if version in v:
+                        print(f'Joining {ip_id} ({ip}:{port})')
+                        print(self.join_server(ip_id, ip, port))
+                if shodon:
+                    print(self.update_shodon(ip_id, ip))
             else:
                 print(f'{ip_id} ({ip}:{port}) is Offline')
 
@@ -243,6 +273,7 @@ if __name__ == "__main__":
         'user': 'dbuser',
         'password': '123456'
     }
-    db = dbManeger("postgresql", credentials)
+    # db = dbManeger("postgresql", credentials)
+    db = dbManeger("sqlite", "ip2.db")
     s = Scanner(db)
-    asyncio.run(s.update(advanced=False))
+    asyncio.run(s.update(advanced=False, shodon=True))

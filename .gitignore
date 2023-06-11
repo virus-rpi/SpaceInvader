@@ -12,3 +12,4 @@ lab
 legacy
 
 !requirements.txt
+!templateDB.db

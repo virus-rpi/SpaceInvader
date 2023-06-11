@@ -5,5 +5,7 @@ ip.sqbpro
 *.log
 *.txt
 *.db
+.env
+*.json
 
 !requirements.txt

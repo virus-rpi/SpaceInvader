@@ -6,7 +6,11 @@ import simplejson
 import ping3
 import mcrcon
 import asyncio
-from dbManeger import dbManeger
+import os
+from custom_modules import dbManeger
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def check_rcon(host="localhost", port=25575):
@@ -266,14 +270,16 @@ class Scanner:
 
 
 if __name__ == "__main__":
-    credentials = {
-        'host': 'localhost',
-        'port': '5432',
-        'database': 'ip',
-        'user': 'dbuser',
-        'password': '123456'
-    }
-    # db = dbManeger("postgresql", credentials)
-    db = dbManeger("sqlite", "ip2.db")
+    DB_TYPE = os.getenv("dbType")
+    if DB_TYPE == "postgres":
+        DB = os.getenv("credentials")
+    if DB_TYPE == "sqlite":
+        DB = os.getenv("dbFile")
+    else:
+        print("No DB_TYPE")
+        DB = None
+
+    dbM = dbManeger.dbManeger
+    db = dbM(DB_TYPE, DB)
     s = Scanner(db)
     asyncio.run(s.update(advanced=False, shodon=True))

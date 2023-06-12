@@ -2,7 +2,7 @@ from plotly.subplots import make_subplots
 from dash import Dash, dcc, html, Input, Output
 import dash
 import dash_daq as daq
-import dbManeger
+from custom_modules import dbManeger
 import plotly.graph_objects as go
 from threading import Thread
 import os
@@ -11,32 +11,39 @@ import pandas as pd
 from sqlalchemy import create_engine
 import country_converter as coco
 import numpy as np
+from custom_modules import loadEnv
 
 # from bot import bot
 
 app = Dash(__name__,
-           external_stylesheets=['https://raw.githubusercontent.com/virus-rpi/SpaceInvador/main/assets/style.css'])
+           external_stylesheets=['https://raw.githubusercontent.com/virus-rpi/SpaceInvador/main/assets/style.css']
+           )
 
 
 def globe():
-    disk_engine = create_engine('sqlite:///ip2.db')
-    df = pd.read_sql_query('SELECT country, COUNT(*) FROM ip GROUP BY country', disk_engine)
+    env = loadEnv.load()
 
-    df = df.replace(to_replace='None', value=np.nan).dropna()
-    df = df.replace(to_replace='Not found', value=np.nan).dropna()
+    if env['DB_TYPE'] == 'sqlite':
+        disk_engine = create_engine(f'sqlite:///{env["DB"]}')
+        df = pd.read_sql_query('SELECT country, COUNT(*) FROM ip GROUP BY country', disk_engine)
 
-    for i in list(df['country']):
-        # print(i, coco.convert(names=[i], to="ISO2"))
-        df.loc[df['country'].isin([i]), 'country'] = coco.convert(names=[i], to="ISO3")
+        df = df.replace(to_replace='None', value=np.nan).dropna()
+        df = df.replace(to_replace='Not found', value=np.nan).dropna()
 
-    fig = px.scatter_geo(df, locations="country",
-                         hover_name="country",
-                         size="COUNT(*)",
-                         # projection="natural earth",
-                         color="country"
-                         )
-    fig.update_layout(template="plotly_dark")
-    return fig
+        for i in list(df['country']):
+            # print(i, coco.convert(names=[i], to="ISO2"))
+            df.loc[df['country'].isin([i]), 'country'] = coco.convert(names=[i], to="ISO3")
+
+        fig = px.scatter_geo(df, locations="country",
+                             hover_name="country",
+                             size="COUNT(*)",
+                             # projection="natural earth",
+                             color="country"
+                             )
+        fig.update_layout(template="plotly_dark")
+        return fig
+    else:
+        return 'Not supported for this dbType'
 
 
 app.layout = html.Div([
@@ -77,7 +84,7 @@ app.layout = html.Div([
 		'color': 'white',
             }
 	),
-        dcc.Graph(figure=globe()),
+        # dcc.Graph(figure=globe()),
         html.P(" \n\n\n"),
     ],
         style={
@@ -145,7 +152,9 @@ def toggle_bot(value):
     [dash.dependencies.Input('update', 'n_clicks')],
 )
 def update_charts(_):
-    db = dbManeger.dbManeger("sqlite", r"ip2.db")
+    env = loadEnv.load()
+
+    db = dbManeger.dbManeger(env['DB_TYPE'], env['DB'])
 
     countrys = db.execute('SELECT country FROM ip')
 
@@ -168,8 +177,9 @@ def update_charts(_):
 
     values1 = list(dic.values())
     labels1 = list(dic.keys())
-    i = labels1.index(None)
-    labels1 = labels1[:i] + ['Offline'] + labels1[i + 1:]
+    if None in labels1:
+        i = labels1.index(None)
+        labels1 = labels1[:i] + ['Offline'] + labels1[i + 1:]
 
     versions = db.execute('SELECT version FROM ip')
 
@@ -261,5 +271,13 @@ def update_charts(_):
     return fig
 
 
+def run():
+    env = loadEnv.load()
+    if env['webPort']:
+        app.run_server(debug=True, port=int(env['webPort']), host='localhost')
+    else:
+        print('Web server disabled')
+
+
 if __name__ == "__main__":
-    app.run(debug=True, port=80, host='localhost')
+    run()

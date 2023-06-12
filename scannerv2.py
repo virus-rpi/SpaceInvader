@@ -10,6 +10,7 @@ import os
 from custom_modules import dbManeger, loadEnv
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
+import sqlite3
 
 load_dotenv()
 
@@ -131,7 +132,7 @@ class Scanner:
                 if 'sample' in data['players']:
                     players = data['players']['sample']
                     if self.db.getType() == 'sqlite':
-                        self.db.execute(f"UPDATE ip SET players = '{players}' WHERE nr = {str(ip_id)}")
+                        self.db.execute(f"UPDATE ip SET players = '{str(players)}' WHERE nr = {str(ip_id)}")
                     elif self.db.getType() == 'postgresql':
                         self.db.execute("UPDATE ip SET players = %s WHERE nr = %s", (str(players), str(ip_id)))
                     return f'({online_players}/{max_online_players}) Players: {[name["name"] for name in players]}'
@@ -250,7 +251,8 @@ class Scanner:
         print('\n----------\n')
         return ''
 
-    async def update(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False, async_batches=True):
+    async def update(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False,
+                     async_batches=True):
         ip_data = self.read()
         batches = [ip_data[i:i + batch_size] for i in range(0, len(ip_data), batch_size)]
         results = []
@@ -269,7 +271,8 @@ class Scanner:
                     data = await self.get_data(ip_id, ip, port)
                     results.append(data)
 
-            results = await asyncio.gather(*request_tasks)
+            if async_batches:
+                results = await asyncio.gather(*request_tasks)
 
             for ip_data in batch:
                 ip_id = ip_data[0]
@@ -277,17 +280,24 @@ class Scanner:
                 port = int(ip_data[2])
                 data = results[batch.index(ip_data)]
 
-                task = asyncio.ensure_future(self.update_db(ip_id, ip, port, data, advanced, join, version, shodon))
-                db_tasks.append(task)
+                if async_batches:
+                    task = asyncio.ensure_future(self.update_db(ip_id, ip, port, data, advanced, join, version, shodon))
+                    db_tasks.append(task)
+                else:
+                    await self.update_db(ip_id, ip, port, data, advanced, join, version, shodon)
 
-            await asyncio.gather(*db_tasks)
+            if async_batches:
+                await asyncio.gather(*db_tasks)
 
-    def run(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False, max_workers=1000000, async_batches=True):
+    def run(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False, max_workers=1000000,
+            async_batches=True):
         executor = ThreadPoolExecutor(max_workers=max_workers)
 
         loop = asyncio.get_event_loop()
         loop.set_default_executor(executor)
-        loop.run_until_complete(self.update(batch_size=batch_size, advanced=advanced, join=join, version=version, shodon=shodon, async_batches=async_batches))
+        loop.run_until_complete(
+            self.update(batch_size=batch_size, advanced=advanced, join=join, version=version, shodon=shodon,
+                        async_batches=async_batches))
         executor.shutdown(wait=True)
 
 

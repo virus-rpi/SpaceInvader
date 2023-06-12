@@ -4,6 +4,7 @@ import setup
 from custom_modules import loadEnv
 import threading
 import subprocess
+import web_app
 
 banner = """
 """
@@ -26,6 +27,11 @@ def help_cmd():
 def scan_cmd():
     print("Scanning for new servers...\n")
     subprocess.Popen(f'python scan.py', shell=False)
+
+
+def webApp_cmd():
+    print("Starting web app...\n")
+    subprocess.Popen(f'python web_app.py', shell=False)
 
 
 def run_command(cmd):
@@ -51,8 +57,20 @@ commands = {
         "description": "Scan for new Minecraft server",
         "usage": "scan",
         "function": scan_cmd,
+        "run_in_thread": True,
+    },
+    "webApp": {
+        "description": "Start the web app",
+        "usage": "webApp",
+        "function": webApp_cmd,
         "run_in_thread": False,
     },
+    "stop": {
+        "description": "Stop threads",
+        "usage": "stop",
+        "function": lambda: None,
+        "run_in_thread": False,
+    }
 }
 
 while True:

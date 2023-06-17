@@ -1,0 +1,20 @@
+CREATE TABLE "ip" (
+	"nr"	INTEGER UNIQUE,
+	"ip"	TEXT,
+	"port"	NUMERIC,
+	"onlinePlayers"	INTEGER,
+	"maxPlayers"	INTEGER,
+	"version"	TEXT,
+	"motd"	TEXT,
+	"players"	TEXT,
+	"plugins"	TEXT,
+	"type"	TEXT,
+	"whitelist"	NUMERIC,
+	"ping"	BLOB,
+	"last_online"	TEXT,
+	"country"	TEXT,
+	"rcon"	TEXT DEFAULT 'False',
+	"timeline"	TEXT DEFAULT '{}',
+	"shodon"	TEXT,
+	PRIMARY KEY("nr" AUTOINCREMENT)
+)

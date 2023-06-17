@@ -48,10 +48,26 @@ This Project ist still work in progress and not very useable at the moment.
 Also please DON'T use it for griefing.
 
 ## Usage
-1. Run the setup.py script and answer the questions
-2. To scan for server ips run scan.py
-3. To update the DB and collect more data run scannerV2.py
-4. To see stats run web_app.py
+1. Setup the DB
+2. Run the setup.py script and answer the questions
+3. To scan for server ips run scan.py
+4. To update the DB and collect more data run scannerV2.py
+5. To see stats run web_app.py
+
+
+## How to setup the Database
+### Sqlite:
+1. Rename the templatDB.db file to anything you like
+### Postgres:
+1. Edit the username, password and db name in the Dockerfile
+2. Build the Docker Container with:
+   ```
+   docker build -t spaceinvador-image .
+   ```
+3. Run the Docker Container with:
+   ```
+   docker run -d --name spaceinvador-container -p 5432:5432 spaceinvador-image
+   ```
 
 
 ## License

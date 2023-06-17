@@ -10,4 +10,4 @@ ENV POSTGRES_DB=ips
 COPY init.sql /docker-entrypoint-initdb.d/
 
 # Grant admin privileges to the user
-RUN echo "ALTER USER dbUser WITH SUPERUSER;" >> /docker-entrypoint-initdb.d/init.sql
+RUN echo "ALTER USER dbUser WITH SUPERUSER;" >> /docker-entrypoint-initdb.d/db.sql

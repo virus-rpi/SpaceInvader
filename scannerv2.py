@@ -175,7 +175,7 @@ class Scanner:
         return f'Ping: {ping}'
 
     def update_last_online(self, ip_id):
-        time_now = time.strftime("%d %b %H:%M:%S")
+        time_now = time.strftime("%d %b %Y %H:%M:%S")
         self.db.execute(f"UPDATE ip SET last_online = '{time_now}' WHERE nr = {str(ip_id)}")
 
     def update_rcon(self, ip_id, ip):
@@ -306,4 +306,4 @@ if __name__ == "__main__":
 
     s = Scanner(dbManeger.dbManeger(env['DB_TYPE'], env['DB']))
 
-    s.run(advanced=True)
+    s.run()

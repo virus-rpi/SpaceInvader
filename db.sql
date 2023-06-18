@@ -17,3 +17,5 @@ CREATE TABLE "ip" (
     "timeline" TEXT DEFAULT '{}',
     "shodon" TEXT
 );
+
+CREATE USER dbUser WITH PASSWORD '123456' SUPERUSER;

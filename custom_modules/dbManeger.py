@@ -1,7 +1,10 @@
 import sqlite3
 from sqlite3 import Error
 import psycopg2
-import loadEnv
+try:
+    import loadEnv
+except ModuleNotFoundError:
+    import custom_modules.loadEnv as loadEnv
 
 
 class dbManeger:

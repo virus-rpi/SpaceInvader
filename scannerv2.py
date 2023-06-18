@@ -124,9 +124,9 @@ class Scanner:
 
     def update_players(self, ip_id, ip, data, advanced):
         online_players = data['players']['online']
-        self.db.execute(f'UPDATE ip SET onlinePlayers = {online_players} WHERE nr = {str(ip_id)}')
+        self.db.execute(f'UPDATE ip SET "onlinePlayers" = {online_players} WHERE nr = {str(ip_id)}')
         max_online_players = data['players']['max']
-        self.db.execute(f'UPDATE ip SET maxPlayers = {max_online_players} WHERE nr = {str(ip_id)}')
+        self.db.execute(f'UPDATE ip SET "maxPlayers" = {max_online_players} WHERE nr = {str(ip_id)}')
         if advanced:
             try:
                 if 'sample' in data['players']:
@@ -192,11 +192,15 @@ class Scanner:
     def update_timeline(self, ip_id, data):
         time_now = time.strftime("%d %b %H:%M:%S")
         timeline = eval(self.db.execute(f'SELECT timeline FROM ip WHERE nr = {str(ip_id)}')[0][0])
-        timeline[time_now] = json.dumps(data)
+        # timeline[time_now] = json.dumps(data)
         if self.db.getType() == 'sqlite':
-            self.db.execute('UPDATE ip SET timeline = ? WHERE nr = ?', (str(timeline), str(ip_id)))
-        elif self.db.getType() == 'postgresql':
-            self.db.execute('UPDATE ip SET timeline = %s WHERE nr = %s', (str(timeline), str(ip_id)))
+            timeline_id = self.db.execute('INSERT INTO timeline (timestamp, data) VALUES (?, ?) RETURNING id;', (str(time_now), str(json.dumps(data))))
+            timeline.append(timeline_id[0][0])
+            self.db.execute(f"UPDATE ip SET timeline = ? WHERE nr = ?", (str(timeline), str(ip_id)))
+        elif self.db.getType() == 'postgres':
+            timeline_id = self.db.execute('INSERT INTO timeline (timestamp, data) VALUES (%s, %s) RETURNING id;', (str(time_now), str(json.dumps(data))))
+            timeline.append(timeline_id[0][0])
+            self.db.execute(f"UPDATE ip SET timeline = %s WHERE nr = %s", (str(timeline), str(ip_id)))
 
     def join_server(self, ip_id, ip, port):
         requests.get(f'http://localhost:25567/connect?ip={ip}&port={port}')
@@ -289,14 +293,14 @@ class Scanner:
             if async_batches:
                 await asyncio.gather(*db_tasks)
 
-    def run(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodon=False, max_workers=1000000,
+    def run(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodan=False, max_workers=1000000,
             async_batches=True):
         executor = ThreadPoolExecutor(max_workers=max_workers)
 
         loop = asyncio.get_event_loop()
         loop.set_default_executor(executor)
         loop.run_until_complete(
-            self.update(batch_size=batch_size, advanced=advanced, join=join, version=version, shodon=shodon,
+            self.update(batch_size=batch_size, advanced=advanced, join=join, version=version, shodon=shodan,
                         async_batches=async_batches))
         executor.shutdown(wait=True)
 

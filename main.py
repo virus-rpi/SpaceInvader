@@ -8,6 +8,8 @@ import web_app
 import datetime
 from custom_modules import dbManeger
 import pyperclip
+from scannerv2 import Scanner
+from custom_modules import discord_bot
 
 banner = r"""
   ___________________  _____  _________ ___________.___ ___________   _________  ________   ________ __________ 
@@ -18,34 +20,28 @@ banner = r"""
         \/                  \/        \/        \/             \/              \/        \/         \/       \/ 
 
 """
-print(banner)
 
 printed_servers = []
 
-if not os.path.exists('.env'):
-    setup.setup()
-    print("Setup complete, please restart the program")
 
-env = loadEnv.load()
-
-
-def help_cmd(args=None):
+def help_cmd(args=None, env=None):
     string = "Commands:\n"
     for command in commands:
         string += f"  {command}: \n    Description: {commands[command]['description']} \n    Usage: {commands[command]['usage']}\n"
     print(string)
 
 
-def scan_cmd(args=None):
+def scan_cmd(args=None, env=None):
     print("Scanning for new servers...\n")
     subprocess.Popen(f'python scan.py', shell=False)
 
 
-def webApp_cmd(args=None):
+def webApp_cmd(args=None, env=None):
     print("Starting web app...\n")
     subprocess.Popen(f'python web_app.py', shell=False)
 
-def server_cmd(args=None):
+
+def server_cmd(args=None, env=None):
     minutes = 5
     version = None
     online_players = False
@@ -79,9 +75,9 @@ def server_cmd(args=None):
     sql = f"SELECT * FROM ip WHERE whitelist IS NOT true"
 
     if online_players and version:
-        sql += f" AND onlinePlayers > 0 AND version = '{version}'"
+        sql += f" AND \"onlinePlayers\" > 0 AND version = '{version}'"
     elif online_players:
-        sql += " AND onlinePlayers > 0"
+        sql += " AND \"onlinePlayers\" > 0"
     elif version:
         sql += f" AND version = '{version}'"
 
@@ -117,7 +113,8 @@ def server_cmd(args=None):
             number += 1
             continue
         print(
-            f"Server {server_count}: {data[1]}:{data[2]} ({data[5]})    ID: {data[0]}    Last Scan: {abs(time_diff)} minutes ago", end="")
+            f"Server {server_count}: {data[1]}:{data[2]} ({data[5]})    ID: {data[0]}    Last Scan: {abs(time_diff)} minutes ago",
+            end="")
         if data[10] is None:
             print(f"   ⚠ No whitelist scan data available", end="")
         print()
@@ -129,18 +126,37 @@ def server_cmd(args=None):
 
         printed_servers.append(data[0])
         server_count += 1
+    if server_count == 1:
+        print("No servers found. Try increasing the minutes or removing the online players filter")
 
 
-def run_command(cmd, args=None):
-    if cmd in commands:
-        if cmd == "stop":
-            stop_flag.set()
-        else:
-            if commands[cmd].get("run_in_thread", False):
-                thread = threading.Thread(target=commands[cmd]["function"], args=(args,))
-                thread.start()
-            else:
-                commands[cmd]["function"](args)
+def update_cmd(args=None, env=None):
+    print("Updating...")
+    advanced = False
+    version = None
+    batch_size = None
+    shodan = False
+
+    if args:
+        for i in args:
+            if i.startswith("a"):
+                advanced = True
+            if i.startswith("j"):
+                version = i.split(" ")[1]
+            if i.startswith("b"):
+                batch_size = int(i.split(" ")[1])
+            if i.startswith("s"):
+                shodan = True
+
+    s = Scanner(dbManeger.dbManeger(env['DB_TYPE'], env['DB']))
+    eval("s.run(advanced=advanced, join=" + (
+        "False" if version is None else "True") + ", version=version, shodan=shodan" + (
+             f", batch_size={batch_size}" if batch_size else "") + ")")
+
+
+def discord_cmd(args=None, env=None):
+    print("Starting discord bot...")
+    discord_bot.start()
 
 
 commands = {
@@ -169,8 +185,8 @@ commands = {
         "run_in_thread": False,
     },
     "server": {
-        "description": "Returns a join able server",
-        "usage": "server [-v Version] [-o (should people be online) -m minutes (how long ago the server was online)] -n int/all (number of servers to return) -c (copy to clipboard) -w (ensure server has no whitelist)",
+        "description": "Returns a joinable server",
+        "usage": "server [-v Version] [-o (should people be online) -m minutes (how long ago the server was online)] [-n int/all (number of servers to return)] [-c (copy to clipboard)] [-w (ensure server has no whitelist)]",
         "function": server_cmd,
         "run_in_thread": False,
     },
@@ -180,13 +196,53 @@ commands = {
         "function": lambda: exit(0),
         "run_in_thread": False,
     },
+    "update": {
+        "description": "Update the data in the database",
+        "usage": "update [-a (advanced)] [-j version (join server on version for whitelist scan)] [-b int (batch size)] [-s (Shodan lookup)]",
+        "function": update_cmd,
+        "run_in_thread": False,
+    },
+    "discord": {
+        "description": "Start the discord bot",
+        "usage": "discord",
+        "function": discord_cmd,
+        "run_in_thread": False,
+    },
 }
 
-while True:
-    user_input = input(">>> ")
-    parts = user_input.split(maxsplit=1)
-    cmd = parts[0]
-    args = parts[1].split('-')[1:] if len(parts) > 1 else None
 
+def run_command(cmd, args=None, env=None):
     if cmd in commands:
-        run_command(cmd, args)
+        if cmd == "stop":
+            for thread in threading.enumerate():
+                if thread != threading.current_thread():
+                    thread.join()
+            return
+        else:
+            if commands[cmd].get("run_in_thread", False):
+                thread = threading.Thread(target=commands[cmd]["function"], args=(args, env))
+                thread.start()
+            else:
+                commands[cmd]["function"](args, env)
+
+
+def main():
+    print(banner)
+    env = loadEnv.load()
+
+    if not os.path.exists('.env'):
+        setup.setup()
+        print("Setup complete, please restart the program")
+
+    while True:
+        user_input = input(">>> ")
+        parts = user_input.split(maxsplit=1)
+        cmd = parts[0]
+        args = parts[1].split('-')[1:] if len(parts) > 1 else None
+
+        if cmd in commands:
+            run_command(cmd, args, env)
+
+
+if __name__ == "__main__":
+    main()

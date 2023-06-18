@@ -55,7 +55,7 @@ class dbManeger:
             cmd = "INSERT INTO ip (ip, port, maxPlayers, onlinePlayers, version, motd, players) VALUES (?, ?, ?, ?, ?, ?, ?);"
             params = (ip, port, maxPlayers, onlinePlayers, version, motd, players)
             self.execute(cmd, params)
-        elif self.type == "postgresql":
+        elif self.type == "postgres":
             cmd = "INSERT INTO ip (ip, port, maxPlayers, onlinePlayers, version, motd, players) VALUES (%s, %s, %s, %s, %s, %s, %s);"
             params = (ip, port, maxPlayers, onlinePlayers, version, motd, players)
             self.execute(cmd, params)

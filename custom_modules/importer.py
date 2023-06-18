@@ -25,12 +25,14 @@ class importer:
         if self.data.endswith(".txt"):
             with open(self.data, encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
-                GUIPattern = re.compile("\d+ - \d+.\d+.\d+.\d+ - \d+ - \d+/\d+ - [A-Za-z0-9. ]+- [A-Za-z0-9. ]+-")
-                CLIPattern = re.compile("[(]\d+.\d+.\d+.\d+:\d+[)][(]\d+/\d+[)][(]\d+.\d+.\d+[)][(]")
+                GUIPattern = re.compile(r"\d+ - \d+.\d+.\d+.\d+ - \d+ - \d+/\d+ - [A-Za-z0-9. ]+- [A-Za-z0-9. ]+-")
+                CLIPattern = re.compile(r"[(]\d+.\d+.\d+.\d+:\d+[)][(]\d+/\d+[)][(]\d+.\d+.\d+[)][(]")
                 if re.search(GUIPattern, lines[0]):
                     return "GUI"
                 if re.search(CLIPattern, lines[0]):
                     return "CLI"
+                if lines[0].startswith('<?xml version="1.0"?>'):
+                    return "masscan"
 
     def importData(self, data):
         self.data = data

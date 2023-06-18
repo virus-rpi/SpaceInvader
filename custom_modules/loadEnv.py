@@ -7,8 +7,8 @@ load_dotenv()
 def load():
     DB_TYPE = os.getenv("dbType")
     if DB_TYPE == "postgres":
-        DB = os.getenv("credentials")
-    if DB_TYPE == "sqlite":
+        DB = eval(os.getenv("credentials"))
+    elif DB_TYPE == "sqlite":
         DB = os.getenv("dbFile")
     else:
         DB = None

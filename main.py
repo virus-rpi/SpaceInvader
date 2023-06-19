@@ -186,7 +186,7 @@ commands = {
     },
     "server": {
         "description": "Returns a joinable server",
-        "usage": "server [-v Version] [-o (should people be online) -m minutes (how long ago the server was online)] [-n int/all (number of servers to return)] [-c (copy to clipboard)] [-w (ensure server has no whitelist)]",
+        "usage": "server [-v Version] [-o (should people be online)] [-m minutes (how long ago the server was online)] [-n int/all (number of servers to return)] [-c (copy to clipboard)] [-w (ensure server has no whitelist)]",
         "function": server_cmd,
         "run_in_thread": False,
     },

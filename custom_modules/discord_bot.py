@@ -39,7 +39,7 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    if message.content.startswith("/"):
+    if message.content.startswith("!"):
         output_capture = OutputCapture()
         sys.stdout = output_capture
         user_input = message.content.strip()[1:]

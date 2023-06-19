@@ -1,4 +1,5 @@
 def setup():
+    global masscan_rate
     dbFile = None
     credentials = None
     discordToken = None
@@ -25,6 +26,10 @@ def setup():
         webPort = input("Enter the web server port: ")
 
     scanning_method = input("Enter the scanning method (masscan, qubo): ")
+    if scanning_method == "masscan":
+        masscan_rate = input("Enter the masscan rate (default 1500): ")
+        if masscan_rate == "":
+            masscan_rate = 1500
 
     with open(".env", "w") as f:
         f.write(f"dbType={dbType}\n")
@@ -37,6 +42,8 @@ def setup():
         if webBool == "y":
             f.write(f"webPort={webPort}\n")
         f.write(f"scanning_method={scanning_method}\n")
+        if scanning_method == "masscan":
+            f.write(f"masscan_rate={masscan_rate}\n")
 
 
 if __name__ == "__main__":

@@ -19,9 +19,10 @@ def load():
     else:
         DB = None
     webPort = os.getenv("webPort")
+    masscan_rate = os.getenv("masscan_rate")
     discordToken = os.getenv("discordToken")
     scanning_method = os.getenv("scanning_method")
-    return {'DB_TYPE': DB_TYPE, 'DB': DB, 'webPort': webPort, 'discordToken': discordToken, 'scanning_method': scanning_method}
+    return {'DB_TYPE': DB_TYPE, 'DB': DB, 'webPort': webPort, 'discordToken': discordToken, 'scanning_method': scanning_method, 'masscan_rate': masscan_rate}
 
 
 if __name__ == "__main__":

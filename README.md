@@ -5,7 +5,7 @@ The bot can scan for Minecraft Server and can run recon on the scanned servers.
 ## Features
 - Scanning for Minecraft Servers
 - Collect data about scanned servers
-- Host a Discord bot to interact with data (Deleted)
+- Host a Discord bot to interact with data
 - Host website with Statistics and controlles
 
 ## Data that gets collected
@@ -34,7 +34,6 @@ The bot can scan for Minecraft Server and can run recon on the scanned servers.
 - Dockerizaton
 - Add Mc bots to join server and interact with server (e.g. build schematic or chat on server)
 - Proxy to connect to Servers safely and give them more abilitys through custom commands
-- Reimplement Discord Bot
 
 ```
  __          _______ _____    _ 

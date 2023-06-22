@@ -48,10 +48,7 @@ Also please DON'T use it for griefing.
 
 ## Usage
 1. Setup the DB
-2. Run the setup.py script and answer the questions
-3. To scan for server ips run scan.py
-4. To update the DB and collect more data run scannerV2.py
-5. To see stats run web_app.py
+2. Run the main.py scrips
 
 
 ## How to setup the Database
@@ -67,6 +64,46 @@ Also please DON'T use it for griefing.
    ```
    docker run -d --name spaceinvador-container -p 5432:5432 spaceinvador-image
    ```
+## Commands
+  help: 
+   - Description: Show all commands
+   - Usage: ```help```
+    
+  scan: 
+   - Description: Scan for new Minecraft servers 
+   - Usage: ```scan```
+    
+  webApp: 
+   - Description: Start the web app 
+   - Usage: ```webApp```
+    
+  stop: 
+   - Description: Stop threads 
+   - Usage: ```stop```
+    
+  server: 
+   - Description: Returns a joinable server 
+   - Usage: ```server [-v Version] [-o (should people be online)] [-m minutes (how long ago the server was online)] [-n int/all (number of servers to return)] [-c (copy to clipboard)] [-w (ensure server has no whitelist)] [-u update the data of hte current server ]```
+    
+  exit: 
+   - Description: Exit the program 
+   - Usage: ```exit```
+    
+  update: 
+   - Description: Update the data in the database 
+   - Usage: ```update [-a (advanced)] [-j version (join server on version for whitelist scan)] [-b int (batch size)] [-s (Shodan lookup)]```
+    
+  discord: 
+   - Description: Start the discord bot 
+   - Usage: ```discord```
+    
+  watchlist: 
+   - Description: Put servers on the watchlist 
+   - Usage: ```watchlist [-id id] [-a (add)] [-r (remove)] [-l (list)] [-ip ip]```
+    
+  player: 
+   - Description: Get a player's server history 
+   - Usage: ```player -<name>```
 
 
 ## License

@@ -172,6 +172,7 @@ def watch_cmd(args=None, env=None):
     mode = None
     id = None
     ip = None
+    player = None
 
     if args:
         for i in args:
@@ -185,14 +186,17 @@ def watch_cmd(args=None, env=None):
                 mode = "list"
             if i.startswith("ip"):
                 ip = i.split(" ")[1]
+            if i.startswith("p"):
+                player = i.split(" ")[1]
 
-    if id is None and mode != "list":
-        db = dbManeger.dbManeger(env['DB_TYPE'], env['DB'])
-        id = db.execute(f"SELECT nr FROM ip WHERE ip = '{ip}' LIMIT 1")
-        if len(id) == 0:
-            print("No server found with that ip")
-            return
-        id = id[0][0]
+    if player is None:
+        if id is None and mode != "list":
+            db = dbManeger.dbManeger(env['DB_TYPE'], env['DB'])
+            id = db.execute(f"SELECT nr FROM ip WHERE ip = '{ip}' LIMIT 1")
+            if len(id) == 0:
+                print("No server found with that ip")
+                return
+            id = id[0][0]
 
     if mode is None:
         print("No mode specified")
@@ -200,13 +204,13 @@ def watch_cmd(args=None, env=None):
 
     if mode == "add":
         with open("watchlist", "w") as f:
-            f.write(f"{id}\n")
+            f.write(f"{id if id else player}\n")
     elif mode == "remove":
         with open("watchlist", "r") as f:
             lines = f.readlines()
         with open("watchlist", "w") as f:
             for line in lines:
-                if line.strip("\n") != id and id != "all":
+                if line.strip("\n") != (id if id else player) and id != "all":
                     f.write(line)
     elif mode == "list":
         with open("watchlist", "r") as f:
@@ -215,6 +219,30 @@ def watch_cmd(args=None, env=None):
             print(line.strip("\n"))
 
     watcher.eye().restart()
+
+
+def player_cmd(args=None, env=None):
+    player_name = None
+    server_ips = None
+
+    if args:
+        player_name = args[0]
+
+    if player_name is None:
+        print("No player specified")
+        return
+
+    db = dbManeger.dbManeger(env['DB_TYPE'], env['DB'])
+
+    ids = db.execute(f"SELECT id FROM timeline WHERE data LIKE '%{player_name}%'")
+    if ids:
+        ids = list(set([i[0] for i in ids]))
+        server_ips = []
+        for i in ids:
+            server_ips.append(db.execute(f"SELECT nr, ip FROM ip WHERE timeline LIKE '%{i}%'"))
+        if server_ips:
+            server_ips = list(set([f"ID: {i[0][0]}   IP: {i[0][1]}" for i in server_ips]))
+    print(f"Player {player_name} was seen on: {server_ips}")
 
 
 commands = {
@@ -271,6 +299,12 @@ commands = {
         "usage": "watchlist [-id id] [-a (add)] [-r (remove)] [-l (list)] [-ip ip]",
         "function": watch_cmd,
         "run_in_thread": True,
+    },
+    "player": {
+        "description": "Get a player's name history",
+        "usage": "player -<name>",
+        "function": player_cmd,
+        "run_in_thread": False,
     },
 }
 

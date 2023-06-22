@@ -48,9 +48,12 @@ class eye:
         for i in self.watchlist:
             i = i.strip()
             if i:
-                self.check(i)
+                if i.isdigit():
+                    self.check_server(i)
+                else:
+                    self.check_player(i)
 
-    def check(self, ip_id):
+    def check_server(self, ip_id):
         data_prev_raw = self.db.execute(f"SELECT * FROM ip WHERE nr = {ip_id}")
         with open(os.devnull, "w") as devnull:
             sys.stdout = devnull
@@ -93,6 +96,11 @@ class eye:
 
         if data_prev['motd'] != data_new['motd']:
             print(f"Server {ip_id}: Motd changed: {data_prev['motd']} -> {data_new['motd']}")
+
+    def check_player(self, player_name):
+        ids = self.db.execute(f"SELECT nr FROM timeline WHERE data LIKE '%{player_name}%'")
+        if ids:
+            print(f"Player {player_name} found in {len(ids)} servers: {ids}")
 
 
 if __name__ == "__main__":

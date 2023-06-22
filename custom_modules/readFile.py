@@ -1,8 +1,15 @@
-from custom_modules.dbManeger import dbManeger
+try:
+    from custom_modules.dbManeger import dbManeger
+except ImportError:
+    from dbManeger import dbManeger
 
 
 def remove_non_ascii(string):
     return ''.join(char for char in string if ord(char) < 128)
+
+
+def ObjectId(x):
+    return x
 
 
 class readFile:
@@ -66,11 +73,57 @@ class readFile:
                 counter += 1
         return data_list
 
+    def getMasscan(self):
+        with open(self.data, encoding='utf-8') as f:
+            lines = f.readlines()[1:]
+            print(lines[0])
+            data_list = []
+            for i in lines:
+                line = i.strip('\n').replace('open tcp ', '')
+                port, ip, _ = line.split(' ')
+                data_list.append([ip, port, [0, 0], "Unknown", "Unknown"])
+        return data_list
+
+    def getCornbread(self):
+        with open(self.data, encoding='utf-8') as f:
+            lines = f.readlines()
+            data_list = []
+            for i in lines:
+                line = eval(i.strip('\n'))
+                ip = line['ip']
+                port = line['port']
+                try:
+                    if line['players'] is not None:
+                        maxPlayers = line['players']['max']
+                        onlinePlayers = line['players']['online']
+                    if line['version'] is not None:
+                        try:
+                            version = line['version']['name']
+                        except KeyError:
+                            version = "Unknown"
+                    try:
+                        motd = line['description']['text']
+                    except KeyError:
+                        motd = "Unknown"
+                    except TypeError:
+                        motd = "Unknown"
+                except KeyError:
+                    maxPlayers = 0
+                    onlinePlayers = 0
+                    version = "Unknown"
+                    motd = "Unknown"
+                data_list.append([ip, port, [maxPlayers, onlinePlayers], version, motd])
+        return data_list
+
     def add(self):
         if self.type == "GUI":
             ips = self.getGUI()
         elif self.type == "CLI":
             ips = self.getCLI()
+        elif self.type == "masscan":
+            ips = self.getMasscan()
+        elif self.type == "cornbread2100":
+            ips = self.getCornbread()
         else:
             ips = self.getCustom()
         print(ips)
@@ -82,8 +135,8 @@ class readFile:
             onlinePlayers = server[2][1]
             version = server[3]
             motd = remove_non_ascii(server[4]).replace("@", "").replace('"', "").replace("'", "")
-            db.add(ip, port, maxPlayers, onlinePlayers, version, motd)
-            print(ip, port, maxPlayers, onlinePlayers, version, motd)
+            self.db.add(ip, port, maxPlayers, onlinePlayers, version, motd)
+            # print(ip, port, maxPlayers, onlinePlayers, version, motd)
 
 
 if __name__ == "__main__":

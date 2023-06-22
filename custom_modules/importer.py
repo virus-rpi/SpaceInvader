@@ -1,7 +1,12 @@
 import os
-
-from custom_modules.readFile import readFile
-from custom_modules.dbManeger import dbManeger
+import sys
+import inspect
+try:
+    from custom_modules.readFile import readFile
+    from custom_modules.dbManeger import dbManeger
+except ModuleNotFoundError:
+    from readFile import readFile
+    from dbManeger import dbManeger
 import regex as re
 from dotenv import load_dotenv
 
@@ -31,16 +36,19 @@ class importer:
                     return "GUI"
                 if re.search(CLIPattern, lines[0]):
                     return "CLI"
-                if lines[0].startswith('<?xml version="1.0"?>'):
+                if lines[0].startswith('#masscan'):
                     return "masscan"
+                else:
+                    return input("Could not detect type, please enter type: ")
 
     def importData(self, data):
         self.data = data
         self.type = self.figureOutType()
+        print(f"Detected type: {self.type}")
         print(f"Importing to {DB_TYPE} database...")
-        # readFile(self.db, self.data, self.type).add()
+        readFile(self.db, self.data, self.type).add()
 
 
 if __name__ == "__main__":
     i = importer()
-    i.importData("servers.txt")
+    i.importData("server.txt")

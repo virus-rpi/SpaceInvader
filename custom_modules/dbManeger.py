@@ -17,9 +17,17 @@ class dbManeger:
     def create_connection(self):
         if self.type == "postgres":
             try:
+                try:
+                    credentials = eval(self.credentials)
+                except TypeError:
+                    credentials = self.credentials
                 self.conn = psycopg2.connect(
-                    "host={host} port={port} dbname={database} user={user} password={password}".format(
-                        **self.credentials))
+                    host=credentials['host'],
+                    port=credentials['port'],
+                    dbname=credentials['database'],
+                    user=credentials['user'],
+                    password=credentials['password']
+                )
             except psycopg2.Error as e:
                 print(e)
         elif self.type == "sqlite":
@@ -47,18 +55,27 @@ class dbManeger:
             self.closeCon()
             return res
         except Exception as e:
-            print(e)
+            print(f"Error: {e}")
             self.closeCon()
 
     def add(self, ip=None, port=None, maxPlayers=None, onlinePlayers=None, version=None, motd=None, players=None):
         if self.type == "sqlite":
-            cmd = "INSERT INTO ip (ip, port, maxPlayers, onlinePlayers, version, motd, players) VALUES (?, ?, ?, ?, ?, ?, ?);"
-            params = (ip, port, maxPlayers, onlinePlayers, version, motd, players)
+            cmd = "INSERT INTO ip (ip, port, maxPlayers, onlinePlayers, version, motd, players) " \
+                  "SELECT ?, ?, ?, ?, ?, ?, ? " \
+                  "WHERE NOT EXISTS (SELECT 1 FROM ip WHERE ip = ?);"
+            params = (ip, port, maxPlayers, onlinePlayers, version, motd, players, ip)
             self.execute(cmd, params)
         elif self.type == "postgres":
-            cmd = "INSERT INTO ip (ip, port, maxPlayers, onlinePlayers, version, motd, players) VALUES (%s, %s, %s, %s, %s, %s, %s);"
-            params = (ip, port, maxPlayers, onlinePlayers, version, motd, players)
-            self.execute(cmd, params)
+            cmd = 'INSERT INTO ip (ip, port, "maxPlayers", "onlinePlayers", "version", motd, players) ' \
+                  "SELECT %s, %s, %s, %s, %s, %s, %s " \
+                  "WHERE NOT EXISTS (SELECT * FROM ip WHERE ip = %s) " \
+                  "RETURNING nr;"
+            params = (ip, port, maxPlayers, onlinePlayers, version, motd, players, ip)
+            id = self.execute(cmd, params)
+            if len(id) > 0:
+                print(id[0][0])
+            else:
+                print("Already exists")
 
     def getType(self):
         return self.type

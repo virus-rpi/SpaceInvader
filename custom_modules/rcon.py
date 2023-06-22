@@ -2,11 +2,8 @@ import mcrcon
 
 
 def rcon(host='localhost', port=25575, wordlist_path='passwords.txt'):
-    try:
-        with open(wordlist_path) as f:
-            passwords = f.read().splitlines()
-    except:
-        return
+    with open(wordlist_path, encoding="utf-8", errors="ignore") as f:
+        passwords = f.readlines()
 
     plen = len(passwords)
     password = None

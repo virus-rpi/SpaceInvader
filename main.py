@@ -10,6 +10,7 @@ from custom_modules import dbManeger
 import pyperclip
 from scannerv2 import Scanner
 from custom_modules import discord_bot
+from custom_modules import watcher
 
 banner = r"""
   ___________________  _____  _________ ___________.___ ___________   _________  ________   ________ __________ 
@@ -48,6 +49,7 @@ def server_cmd(args=None, env=None):
     number = 1
     copy_to_clipboard = False
     ensure_no_whitelist = False
+    update = False
 
     if args:
         for i in args:
@@ -65,6 +67,8 @@ def server_cmd(args=None, env=None):
                     number = int(number)
             if i == "c":
                 copy_to_clipboard = True
+            if i == "u":
+                update = True
             if i.startswith("w"):
                 ensure_no_whitelist = True
 
@@ -112,9 +116,14 @@ def server_cmd(args=None, env=None):
         if ensure_no_whitelist and data[10] is None:
             number += 1
             continue
+        if update:
+            scanner = Scanner(dbManeger.dbManeger(env['DB_TYPE'], env['DB']))
+            scanner.single_update(data[0])
+            data = db.execute(f"SELECT * FROM ip WHERE nr = {data[0]}")[0]
         print(
             f"Server {server_count}: {data[1]}:{data[2]} ({data[5]})    ID: {data[0]}    Last Scan: {abs(time_diff)} minutes ago",
-            end="")
+            end=""
+        )
         if data[10] is None:
             print(f"   ⚠ No whitelist scan data available", end="")
         print()
@@ -159,6 +168,55 @@ def discord_cmd(args=None, env=None):
     discord_bot.start()
 
 
+def watch_cmd(args=None, env=None):
+    mode = None
+    id = None
+    ip = None
+
+    if args:
+        for i in args:
+            if i.startswith("id"):
+                id = i.split(" ")[1]
+            if i.startswith("a"):
+                mode = "add"
+            if i.startswith("r"):
+                mode = "remove"
+            if i.startswith("l"):
+                mode = "list"
+            if i.startswith("ip"):
+                ip = i.split(" ")[1]
+
+    if id is None and mode != "list":
+        db = dbManeger.dbManeger(env['DB_TYPE'], env['DB'])
+        id = db.execute(f"SELECT nr FROM ip WHERE ip = '{ip}' LIMIT 1")
+        if len(id) == 0:
+            print("No server found with that ip")
+            return
+        id = id[0][0]
+
+    if mode is None:
+        print("No mode specified")
+        return
+
+    if mode == "add":
+        with open("watchlist", "w") as f:
+            f.write(f"{id}\n")
+    elif mode == "remove":
+        with open("watchlist", "r") as f:
+            lines = f.readlines()
+        with open("watchlist", "w") as f:
+            for line in lines:
+                if line.strip("\n") != id and id != "all":
+                    f.write(line)
+    elif mode == "list":
+        with open("watchlist", "r") as f:
+            lines = f.readlines()
+        for line in lines:
+            print(line.strip("\n"))
+
+    watcher.eye().restart()
+
+
 commands = {
     "help": {
         "description": "Show this help message",
@@ -186,7 +244,7 @@ commands = {
     },
     "server": {
         "description": "Returns a joinable server",
-        "usage": "server [-v Version] [-o (should people be online)] [-m minutes (how long ago the server was online)] [-n int/all (number of servers to return)] [-c (copy to clipboard)] [-w (ensure server has no whitelist)]",
+        "usage": "server [-v Version] [-o (should people be online)] [-m minutes (how long ago the server was online)] [-n int/all (number of servers to return)] [-c (copy to clipboard)] [-w (ensure server has no whitelist)] [-u update the data of hte current server ]",
         "function": server_cmd,
         "run_in_thread": False,
     },
@@ -207,6 +265,12 @@ commands = {
         "usage": "discord",
         "function": discord_cmd,
         "run_in_thread": False,
+    },
+    "watchlist": {
+        "description": "Put servers on the watchlist",
+        "usage": "watchlist [-id id] [-a (add)] [-r (remove)] [-l (list)] [-ip ip]",
+        "function": watch_cmd,
+        "run_in_thread": True,
     },
 }
 

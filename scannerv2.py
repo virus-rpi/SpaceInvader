@@ -123,9 +123,15 @@ class Scanner:
         return f'Country: {country}'
 
     def update_players(self, ip_id, ip, data, advanced):
-        online_players = data['players']['online']
+        try:
+            online_players = data['players']['online']
+        except KeyError:
+            online_players = 0
         self.db.execute(f'UPDATE ip SET "onlinePlayers" = {online_players} WHERE nr = {str(ip_id)}')
-        max_online_players = data['players']['max']
+        try:
+            max_online_players = data['players']['max']
+        except KeyError:
+            max_online_players = 20
         self.db.execute(f'UPDATE ip SET "maxPlayers" = {max_online_players} WHERE nr = {str(ip_id)}')
         if advanced:
             try:
@@ -163,7 +169,10 @@ class Scanner:
             try:
                 motd = motd = data['description']['extra'][0]['text']
             except:
-                motd = data['description']
+                try:
+                    motd = data['description']
+                except:
+                    motd = 'Non db compatible motd'
 
         motd = remove_non_ascii(motd).replace("@", "").replace('"', "").replace("'", "")
         self.db.execute(f"UPDATE ip SET motd = '{motd}' WHERE nr = {str(ip_id)}")
@@ -194,12 +203,17 @@ class Scanner:
         timeline = eval(self.db.execute(f'SELECT timeline FROM ip WHERE nr = {str(ip_id)}')[0][0])
         # timeline[time_now] = json.dumps(data)
         if self.db.getType() == 'sqlite':
-            timeline_id = self.db.execute('INSERT INTO timeline (timestamp, data) VALUES (?, ?) RETURNING id;', (str(time_now), str(json.dumps(data))))
+            timeline_id = self.db.execute('INSERT INTO timeline (timestamp, data) VALUES (?, ?) RETURNING id;',
+                                          (str(time_now), str(json.dumps(data))))
             timeline.append(timeline_id[0][0])
             self.db.execute(f"UPDATE ip SET timeline = ? WHERE nr = ?", (str(timeline), str(ip_id)))
         elif self.db.getType() == 'postgres':
-            timeline_id = self.db.execute('INSERT INTO timeline (timestamp, data) VALUES (%s, %s) RETURNING id;', (str(time_now), str(json.dumps(data))))
-            timeline.append(timeline_id[0][0])
+            timeline_id = self.db.execute('INSERT INTO timeline (timestamp, data) VALUES (%s, %s) RETURNING id;',
+                                          (str(time_now), str(json.dumps(data))))
+            try:
+                timeline.append(timeline_id[0][0])
+            except AttributeError:
+                timeline = [timeline_id[0][0]]
             self.db.execute(f"UPDATE ip SET timeline = %s WHERE nr = %s", (str(timeline), str(ip_id)))
 
     def join_server(self, ip_id, ip, port):
@@ -293,6 +307,26 @@ class Scanner:
             if async_batches:
                 await asyncio.gather(*db_tasks)
 
+    async def single_update(self, ip_id, advanced=True, join=False, version="1.19.4", shodon=True):
+        ip_data = self.db.execute(f"SELECT * FROM ip WHERE nr = {str(ip_id)} LIMIT 1")[0]
+        if ip_data:
+            ip = ip_data[1]
+            port = int(ip_data[2])
+
+            try:
+                data = await self.get_data(ip_id, ip, port)
+                await self.update_db(ip_id, ip, port, data, advanced, join, version, shodon)
+            except TimeoutError:
+                print(f'{ip_id} ({ip}:{port}) is Offline')
+            except ConnectionResetError:
+                print(f'{ip_id} ({ip}:{port}) connection reset')
+            except ConnectionRefusedError:
+                print(f'{ip_id} ({ip}:{port}) connection refused')
+            except TypeError:
+                print(f'{ip_id} ({ip}:{port}) type error')
+        else:
+            print(f'Server with ID {ip_id} not found in the database.')
+
     def run(self, batch_size=100, advanced=False, join=False, version="1.19.4", shodan=False, max_workers=1000000,
             async_batches=True):
         executor = ThreadPoolExecutor(max_workers=max_workers)
@@ -305,9 +339,14 @@ class Scanner:
         executor.shutdown(wait=True)
 
 
+def single_update(s, ip_id):
+    asyncio.run(s.single_update(int(ip_id)))
+
+
 if __name__ == "__main__":
     env = loadEnv.load()
 
     s = Scanner(dbManeger.dbManeger(env['DB_TYPE'], env['DB']))
 
-    s.run()
+    # s.run()
+    single_update(s, 96357)

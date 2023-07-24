@@ -85,4 +85,4 @@ if __name__ == "__main__":
     env = loadEnv.load()
 
     db = dbManeger(env['DB_TYPE'], env['DB'])
-    print(db.execute("SELECT * FROM ip;"))
+    # print(db.execute("SELECT * FROM ip;"))

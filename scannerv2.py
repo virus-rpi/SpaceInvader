@@ -139,7 +139,7 @@ class Scanner:
                     players = data['players']['sample']
                     if self.db.getType() == 'sqlite':
                         self.db.execute(f"UPDATE ip SET players = '{str(players)}' WHERE nr = {str(ip_id)}")
-                    elif self.db.getType() == 'postgresql':
+                    elif self.db.getType() == 'postgres':
                         self.db.execute("UPDATE ip SET players = %s WHERE nr = %s", (str(players), str(ip_id)))
                     return f'({online_players}/{max_online_players}) Players: {[name["name"] for name in players]}'
                 else:

@@ -10,13 +10,19 @@ import sys
 import inspect
 import time
 import asyncio
+from playsound import playsound
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-import scannerv2
+def ps():
+    try:
+        playsound("D:/Python/SPACEINVADOR/ping.mp3")
+    except:
+        pass
 
+import scannerv2
 
 class eye:
     _instance = None
@@ -34,9 +40,13 @@ class eye:
         self.env = loadEnv.load()
         self.db = dbManeger.dbManeger(self.env['DB_TYPE'], self.env['DB'])
         self.scanner = scannerv2.Scanner(self.db)
+        self.onlinelist = []
 
-        with open('watchlist') as f:
-            self.watchlist = f.readlines()
+        try:
+            with open('watchlist') as f:
+                self.watchlist = f.readlines()
+        except FileNotFoundError:
+            self.watchlist = ["virusrpi", "314410"]
 
         while True:
             self.update()
@@ -81,26 +91,42 @@ class eye:
 
         if data_prev['version'] != data_new['version']:
             print(f"Server {ip_id}: Version changed: {data_prev['version']} -> {data_new['version']}")
+            ps()
 
         if data_prev['max_players'] != data_new['max_players']:
             print(f"Server {ip_id}: Max players changed: {data_prev['max_players']} -> {data_new['max_players']}")
+            ps()
 
         if data_prev['on_players'] != data_new['on_players']:
             print(f"Server {ip_id}: Online players changed: {data_prev['on_players']} -> {data_new['on_players']}")
+            ps()
 
-        if data_prev['players'] != data_new['players']:
-            print(f"Server {ip_id}: Players changed: {data_prev['players']} -> {data_new['players']}")
+        prev_players = [player['name'] for player in eval(data_prev['players'])].sort()
+        new_players = [player['name'] for player in eval(data_new['players'])].sort()
+        if prev_players != new_players:
+            print(f"Server {ip_id}: Players changed ({len(prev_players)} -> {len(new_players)}): {prev_players} -> {new_players}")
+            ps()
 
         if data_prev['shodan_info'] != data_new['shodan_info']:
             print(f"Server {ip_id}: Shodan info changed: {data_prev['shodan_info']} -> {data_new['shodan_info']}")
+            ps()
 
         if data_prev['motd'] != data_new['motd']:
             print(f"Server {ip_id}: Motd changed: {data_prev['motd']} -> {data_new['motd']}")
+            ps()
 
     def check_player(self, player_name):
-        ids = self.db.execute(f"SELECT nr FROM timeline WHERE data LIKE '%{player_name}%'")
+        ids = self.db.execute(f"SELECT nr FROM ip WHERE players LIKE '%{player_name}%'")
         if ids:
-            print(f"Player {player_name} found in {len(ids)} servers: {ids}")
+            if player_name not in self.onlinelist:
+                self.onlinelist.append(player_name)
+                print(f"Player {player_name} found in {len(ids)} servers: {ids}")
+                ps()
+        else:
+            if player_name in self.onlinelist:
+                self.onlinelist.remove(player_name)
+                print(f"Player {player_name} went offline")
+                ps()
 
 
 if __name__ == "__main__":

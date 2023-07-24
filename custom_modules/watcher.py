@@ -21,6 +21,10 @@ def ps():
         playsound("D:/Python/SPACEINVADOR/ping.mp3")
     except:
         pass
+    try:
+        requests.get("http://localhost:25567/disconnect")
+    except:
+        pass
 
 import scannerv2
 

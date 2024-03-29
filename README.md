@@ -1,4 +1,5 @@
 # SpaceInvador
+*This project is abandoned. I'm developing a better version at https://github.com/CUBUS-mc*
 ## A Copenheimer like bot.
 
 The bot can scan for Minecraft Server and can run recon on the scanned servers.
